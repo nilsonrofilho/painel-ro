@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     ],
   },
   typedRoutes: false,
+  devIndicators: false,
 };
 
 export default nextConfig;

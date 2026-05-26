@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Building2,
-  Users,
   Truck,
   UserCog,
   GanttChartSquare,
@@ -18,6 +18,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface NavItem {
   href: string;
@@ -61,17 +62,20 @@ export function AppShell({
       {/* Mobile top bar */}
       <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b bg-card px-4 lg:hidden">
         <Link href="/" className="flex items-center gap-2">
-          <BrandLogo size={28} />
-          <span className="font-bold text-primary">Painel RO</span>
+          <BrandLogo size={32} />
+          <span className="font-bold text-foreground">Painel RO</span>
         </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileOpen((v) => !v)}
-          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
 
       {/* Sidebar */}
@@ -81,14 +85,17 @@ export function AppShell({
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="hidden h-16 items-center gap-3 border-b px-5 lg:flex">
-          <BrandLogo size={36} />
-          <div className="leading-tight">
-            <p className="text-base font-bold text-primary">Painel RO</p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Construções
-            </p>
-          </div>
+        <div className="hidden h-16 items-center justify-between gap-3 border-b px-5 lg:flex">
+          <Link href="/" className="flex items-center gap-3">
+            <BrandLogo size={40} />
+            <div className="leading-tight">
+              <p className="text-base font-bold text-foreground">Painel RO</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Construções
+              </p>
+            </div>
+          </Link>
+          <ThemeToggle />
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-[4.5rem] lg:pt-3 scrollbar-thin">
           {NAV.map((item) => {
@@ -157,22 +164,24 @@ export function AppShell({
   );
 }
 
+/**
+ * Logo da RO Construções — usa o asset com fundo (já tem o azul-marinho da marca),
+ * funciona bem em ambos os temas.
+ */
 function BrandLogo({ size = 32 }: { size?: number }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      aria-hidden="true"
-      className="shrink-0"
+    <div
+      className="shrink-0 overflow-hidden rounded-lg shadow-sm ring-1 ring-border"
+      style={{ width: size, height: size }}
     >
-      <rect width="40" height="40" rx="8" fill="hsl(var(--brand-primary))" />
-      <path
-        d="M10 28V14h8.5c2.5 0 4.2 1.5 4.2 3.8 0 1.9-1.1 3.3-3 3.7L23.5 28H20l-3.4-6h-3v6H10zm3.6-9h4.4c1.4 0 2.3-.7 2.3-1.9 0-1.2-.9-1.9-2.3-1.9h-4.4V19z"
-        fill="white"
+      <Image
+        src="/logo_com_fundo.jpg"
+        alt="RO Construções"
+        width={size}
+        height={size}
+        priority
+        className="h-full w-full object-cover"
       />
-      <circle cx="28" cy="14" r="3" fill="hsl(var(--brand-accent))" />
-    </svg>
+    </div>
   );
 }

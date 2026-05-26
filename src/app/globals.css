@@ -1,51 +1,116 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Painel RO — Tokens de design
+  Paleta oficial da marca:
+    #041434  azul-marinho profundo  (primary)
+    #e0dee1  off-white               (surface light)
+    #5b6a7f  azul-acinzentado escuro
+    #7c90a4  azul-acinzentado médio
+    #77849c  azul-acinzentado claro
+    #a83227  vermelho-terra          (accent — do ponto da logo)
+
+  Todos os tokens em HSL para compor com /opacity (ex: bg-primary/10).
+*/
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 215 30% 15%;
+  /* Surface */
+  --background: 270 6% 95%;            /* #e0dee1 */
+  --foreground: 220 79% 11%;           /* #041434 */
 
   --card: 0 0% 100%;
-  --card-foreground: 215 30% 15%;
+  --card-foreground: 220 79% 11%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 215 30% 15%;
+  --popover-foreground: 220 79% 11%;
 
-  --primary: 213 53% 25%;
-  --primary-foreground: 0 0% 100%;
+  /* Marca */
+  --primary: 220 79% 11%;              /* #041434 */
+  --primary-foreground: 270 6% 95%;    /* #e0dee1 */
 
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 213 53% 25%;
-
-  --accent: 24 95% 53%;
+  --accent: 5 64% 41%;                 /* #a83227 vermelho-terra */
   --accent-foreground: 0 0% 100%;
 
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  /* Cinzas-azulados */
+  --secondary: 217 23% 88%;
+  --secondary-foreground: 220 79% 11%;
 
-  --destructive: 0 84% 60%;
+  --muted: 220 13% 92%;
+  --muted-foreground: 217 16% 43%;     /* #5b6a7f */
+
+  /* Feedback */
+  --destructive: 5 64% 41%;
   --destructive-foreground: 0 0% 100%;
 
-  --success: 142 71% 45%;
+  --success: 142 55% 36%;
   --success-foreground: 0 0% 100%;
 
-  --warning: 38 92% 50%;
+  --warning: 35 90% 48%;
   --warning-foreground: 0 0% 100%;
 
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 213 53% 25%;
+  /* Bordas / inputs */
+  --border: 217 18% 84%;
+  --input: 217 18% 84%;
+  --ring: 220 79% 11%;
 
   --radius: 0.75rem;
 
-  --brand-primary: 213 53% 25%;
-  --brand-accent: 24 95% 53%;
+  /* Aliases marca */
+  --brand-primary: 220 79% 11%;
+  --brand-accent: 5 64% 41%;
 
-  --status-disponivel: 142 71% 45%;
-  --status-reservado: 38 92% 50%;
-  --status-vendido: 213 53% 25%;
+  /* Status do lote (semáforo construído sobre a paleta da marca) */
+  --status-disponivel: 142 55% 36%;
+  --status-reservado: 35 90% 48%;
+  --status-vendido: 220 79% 11%;
+}
+
+.dark {
+  /* Surface — base no azul-marinho da logo */
+  --background: 220 79% 8%;
+  --foreground: 270 6% 95%;            /* #e0dee1 */
+
+  --card: 220 65% 13%;                 /* card sobe levemente do background */
+  --card-foreground: 270 6% 95%;
+
+  --popover: 220 65% 13%;
+  --popover-foreground: 270 6% 95%;
+
+  /* Inverte primary: agora o claro é o que destaca */
+  --primary: 270 6% 95%;               /* #e0dee1 */
+  --primary-foreground: 220 79% 11%;   /* #041434 */
+
+  --accent: 5 68% 52%;                 /* vermelho-terra mais vibrante p/ contraste */
+  --accent-foreground: 0 0% 100%;
+
+  --secondary: 217 23% 25%;
+  --secondary-foreground: 270 6% 95%;
+
+  --muted: 220 40% 17%;
+  --muted-foreground: 217 18% 65%;     /* #7c90a4-ish */
+
+  --destructive: 5 68% 52%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 142 50% 48%;
+  --success-foreground: 220 79% 11%;
+
+  --warning: 35 92% 60%;
+  --warning-foreground: 220 79% 11%;
+
+  --border: 220 35% 22%;
+  --input: 220 35% 22%;
+  --ring: 270 6% 95%;
+
+  --brand-primary: 270 6% 95%;
+  --brand-accent: 5 68% 52%;
+
+  --status-disponivel: 142 50% 48%;
+  --status-reservado: 35 92% 60%;
+  --status-vendido: 217 30% 70%;       /* azul-cinza claro no dark */
 }
 
 @theme inline {
@@ -89,12 +154,21 @@
   border-color: hsl(var(--border));
 }
 
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 @layer base {

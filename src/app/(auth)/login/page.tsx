@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Building2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
   CardContent,
@@ -61,11 +63,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 px-4 py-12">
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 px-4 py-12">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg">
-            <Building2 className="h-7 w-7 text-primary-foreground" />
+          <div className="mb-4 overflow-hidden rounded-2xl shadow-xl ring-2 ring-border">
+            <Image
+              src="/logo_com_fundo.jpg"
+              alt="RO Construções"
+              width={88}
+              height={88}
+              priority
+              className="block"
+            />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Painel RO</h1>
           <p className="text-sm text-muted-foreground">
