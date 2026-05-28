@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Loader2, Sparkles } from "lucide-react";
+import { Plus, Trash2, Pencil, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   ResponsiveContainer,
@@ -43,7 +43,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { KPICard } from "@/components/kpi-card";
-import { addFase, deleteFase, seedFasesPadrao } from "@/lib/actions/fases";
+import { addFase, updateFase, deleteFase, seedFasesPadrao } from "@/lib/actions/fases";
 import { formatBRL, formatDateBR, formatPercent } from "@/lib/utils";
 import type { FaseObra, Lote } from "@/lib/supabase/types";
 
@@ -56,6 +56,7 @@ interface Props {
 export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [editingFase, setEditingFase] = React.useState<FaseObra | null>(null);
   const orcamentoTotal = Number(lote.orcamento_total ?? 0);
   const orcadoFases = fases.reduce(
     (s, f) => s + Number(f.orcamento ?? 0),
@@ -93,27 +94,49 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
     return pontos;
   }, [fases]);
 
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setSubmitting(true);
     try {
-      await addFase({
+      const payload = {
         lote_id: lote.id,
         nome: String(fd.get("nome") ?? ""),
         orcamento: fd.get("orcamento") ? Number(fd.get("orcamento")) : null,
         data_inicio: (fd.get("data_inicio") as string) || null,
         data_fim: (fd.get("data_fim") as string) || null,
         status: (fd.get("status") as "pendente" | "em_andamento" | "concluida") ?? "pendente",
-        ordem: fases.length + 1,
-      });
-      toast.success("Fase adicionada");
+        ordem: editingFase ? editingFase.ordem : fases.length + 1,
+      };
+      if (editingFase) {
+        await updateFase(editingFase.id, payload);
+        toast.success("Fase atualizada");
+      } else {
+        await addFase(payload);
+        toast.success("Fase adicionada");
+      }
       setOpen(false);
+      setEditingFase(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function openEdit(f: FaseObra) {
+    setEditingFase(f);
+    setOpen(true);
+  }
+
+  function openNew() {
+    setEditingFase(null);
+    setOpen(true);
+  }
+
+  function handleClose(o: boolean) {
+    setOpen(o);
+    if (!o) setEditingFase(null);
   }
 
   async function handleDelete(id: string) {
@@ -184,7 +207,7 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                 Usar fases padrão
               </Button>
             )}
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" onClick={openNew}>
               <Plus className="h-4 w-4" />
               Nova fase
             </Button>
@@ -205,7 +228,7 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                   <TableHead className="text-right">Gasto</TableHead>
                   <TableHead className="w-32">%</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-12" />
+                  <TableHead className="w-20 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -253,14 +276,26 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(f.id)}
-                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(f)}
+                            className="h-7 w-7"
+                            aria-label="Editar fase"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(f.id)}
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                            aria-label="Excluir fase"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -379,16 +414,28 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
         </Card>
       </div>
 
-      {/* Modal nova fase */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* Modal nova/editar fase */}
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova fase de obra</DialogTitle>
+            <DialogTitle>
+              {editingFase ? "Editar fase" : "Nova fase de obra"}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAdd} className="space-y-3">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-3"
+            key={editingFase?.id ?? "novo"}
+          >
             <div className="space-y-1.5">
               <Label htmlFor="nome">Nome *</Label>
-              <Input id="nome" name="nome" required placeholder="Ex: Fundação" />
+              <Input
+                id="nome"
+                name="nome"
+                required
+                placeholder="Ex: Fundação"
+                defaultValue={editingFase?.nome ?? ""}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="orcamento">Orçamento (R$)</Label>
@@ -397,21 +444,36 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                 name="orcamento"
                 type="number"
                 step="0.01"
+                defaultValue={editingFase?.orcamento ?? ""}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="data_inicio">Início</Label>
-                <Input id="data_inicio" name="data_inicio" type="date" />
+                <Label htmlFor="data_inicio">Início da atividade</Label>
+                <Input
+                  id="data_inicio"
+                  name="data_inicio"
+                  type="date"
+                  defaultValue={editingFase?.data_inicio ?? ""}
+                />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="data_fim">Fim previsto</Label>
-                <Input id="data_fim" name="data_fim" type="date" />
+                <Label htmlFor="data_fim">Fim da atividade</Label>
+                <Input
+                  id="data_fim"
+                  name="data_fim"
+                  type="date"
+                  defaultValue={editingFase?.data_fim ?? ""}
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="status">Status</Label>
-              <Select id="status" name="status" defaultValue="pendente">
+              <Select
+                id="status"
+                name="status"
+                defaultValue={editingFase?.status ?? "pendente"}
+              >
                 <option value="pendente">Pendente</option>
                 <option value="em_andamento">Em andamento</option>
                 <option value="concluida">Concluída</option>
@@ -421,14 +483,14 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={() => handleClose(false)}
                 disabled={submitting}
               >
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Adicionar
+                {editingFase ? "Salvar" : "Adicionar"}
               </Button>
             </DialogFooter>
           </form>

@@ -69,6 +69,31 @@ export async function venderLote(input: VendaInput) {
   revalidatePath("/");
 }
 
+export async function updateVenda(
+  vendaId: string,
+  input: Partial<Omit<VendaInput, "lote_id" | "tipo">>,
+) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("vendas")
+    .update(clean(input as Record<string, unknown>))
+    .eq("id", vendaId)
+    .select("lote_id, tipo, valor, status")
+    .single();
+  if (error) throw new Error(error.message);
+  if (data) {
+    // Se for venda ativa, sincroniza valor_venda do lote com o valor mais recente
+    if (data.tipo === "venda" && data.status === "ativa" && data.valor != null) {
+      await supabase
+        .from("lotes")
+        .update({ valor_venda: Number(data.valor) })
+        .eq("id", data.lote_id);
+    }
+    revalidatePath(`/lotes/${data.lote_id}`);
+    revalidatePath("/");
+  }
+}
+
 export async function cancelarVenda(vendaId: string) {
   const supabase = await createClient();
   const { data: venda, error: e1 } = await supabase

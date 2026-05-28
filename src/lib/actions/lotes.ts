@@ -31,6 +31,7 @@ const loteSchema = z.object({
   tipo_planta: z.string().optional().nullable(),
   planta_url: z.string().optional().nullable(),
   foto_url: z.string().optional().nullable(),
+  data_inicio_obra: z.string().optional().nullable(),
   previsao_entrega: z.string().optional().nullable(),
   data_entrega_real: z.string().optional().nullable(),
   responsavel_id: z.string().uuid().optional().nullable(),
@@ -129,4 +130,66 @@ export async function deleteLote(id: string) {
 
 export async function setLoteEtapa(id: string, etapa: string | null) {
   return updateLote(id, { etapa: etapa as LoteInput["etapa"] });
+}
+
+/**
+ * Duplica um lote: copia todos os atributos técnicos e comerciais, mas
+ * reseta status (disponível), data de entrega real e valor de venda.
+ * O novo número é "{original}-cópia" — se já existir, soma sufixo.
+ */
+export async function duplicarLote(
+  loteId: string,
+  opts: { novoNumero?: string } = {},
+) {
+  const supabase = await createClient();
+  const { data: original, error: e1 } = await supabase
+    .from("lotes")
+    .select("*")
+    .eq("id", loteId)
+    .single();
+  if (e1 || !original) throw new Error(e1?.message ?? "Lote não encontrado");
+
+  let novoNumero = opts.novoNumero?.trim() || `${original.numero}-cópia`;
+  for (let attempt = 1; attempt < 50; attempt++) {
+    const { data: existe } = await supabase
+      .from("lotes")
+      .select("id")
+      .eq("quadra_id", original.quadra_id)
+      .eq("numero", novoNumero)
+      .maybeSingle();
+    if (!existe) break;
+    novoNumero = `${original.numero}-cópia-${attempt + 1}`;
+  }
+
+  const { id: _id, created_at: _ca, numero: _n, ...rest } = original;
+  void _id;
+  void _ca;
+  void _n;
+  const { data: novo, error: e2 } = await supabase
+    .from("lotes")
+    .insert({
+      ...rest,
+      numero: novoNumero,
+      status: "disponivel" as const,
+      data_entrega_real: null,
+      valor_venda: null,
+    })
+    .select()
+    .single();
+  if (e2 || !novo) throw new Error(e2?.message ?? "Falha ao duplicar lote");
+
+  const { data: quadra } = await supabase
+    .from("quadras")
+    .select("loteamento_id")
+    .eq("id", original.quadra_id)
+    .single();
+  if (quadra) {
+    revalidatePath(`/loteamentos/${quadra.loteamento_id}`);
+    revalidatePath(
+      `/loteamentos/${quadra.loteamento_id}/quadras/${original.quadra_id}`,
+    );
+  }
+  revalidatePath("/");
+  revalidatePath("/gantt");
+  redirect(`/lotes/${novo.id}`);
 }

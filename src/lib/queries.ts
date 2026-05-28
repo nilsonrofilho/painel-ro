@@ -183,6 +183,27 @@ export async function getLoteContexto(loteId: string): Promise<{
   return { lote, quadra, loteamento };
 }
 
+export async function getMateriaisCatalogo(): Promise<import("@/lib/supabase/types").Material[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("materiais")
+    .select("*")
+    .order("nome");
+  return (data ?? []) as import("@/lib/supabase/types").Material[];
+}
+
+export async function getMaterial(
+  id: string,
+): Promise<import("@/lib/supabase/types").Material | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("materiais")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data as import("@/lib/supabase/types").Material | null;
+}
+
 export async function getFornecedores(): Promise<Fornecedor[]> {
   const supabase = await createClient();
   const { data } = await supabase

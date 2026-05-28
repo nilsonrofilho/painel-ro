@@ -43,6 +43,7 @@ const schema = z.object({
   banheiros: z.string().optional(),
   vagas: z.string().optional(),
   tipo_planta: z.string().optional(),
+  data_inicio_obra: z.string().optional(),
   previsao_entrega: z.string().optional(),
   data_entrega_real: z.string().optional(),
   responsavel_id: z.string().optional(),
@@ -85,6 +86,7 @@ export function LoteForm({ quadraId, lote, funcionarios }: LoteFormProps) {
       banheiros: lote?.banheiros?.toString() ?? "",
       vagas: lote?.vagas?.toString() ?? "",
       tipo_planta: lote?.tipo_planta ?? "",
+      data_inicio_obra: lote?.data_inicio_obra ?? "",
       previsao_entrega: lote?.previsao_entrega ?? "",
       data_entrega_real: lote?.data_entrega_real ?? "",
       responsavel_id: lote?.responsavel_id ?? "",
@@ -113,6 +115,7 @@ export function LoteForm({ quadraId, lote, funcionarios }: LoteFormProps) {
         tipo_planta: values.tipo_planta || null,
         planta_url: plantaUrl,
         foto_url: fotoUrl,
+        data_inicio_obra: values.data_inicio_obra || null,
         previsao_entrega: values.previsao_entrega || null,
         data_entrega_real: values.data_entrega_real || null,
         responsavel_id: values.responsavel_id || null,
@@ -299,7 +302,18 @@ export function LoteForm({ quadraId, lote, funcionarios }: LoteFormProps) {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="data_inicio_obra">Início da obra</Label>
+                  <Input
+                    id="data_inicio_obra"
+                    type="date"
+                    {...register("data_inicio_obra")}
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Se vazio, usa a data de início do loteamento no Gantt.
+                  </p>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="previsao_entrega">Previsão de entrega</Label>
                   <Input

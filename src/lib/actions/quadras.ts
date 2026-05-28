@@ -54,3 +54,74 @@ export async function deleteQuadra(id: string) {
     redirect(`/loteamentos/${quadra.loteamento_id}`);
   }
 }
+
+/**
+ * Duplica uma quadra (e opcionalmente todos os lotes dentro dela).
+ * O identificador novo é "{original}-cópia" — se já existir, soma um sufixo numérico.
+ */
+export async function duplicarQuadra(
+  quadraId: string,
+  opts: { incluirLotes: boolean; novoIdentificador?: string } = { incluirLotes: false },
+) {
+  const supabase = await createClient();
+  const { data: original, error: e1 } = await supabase
+    .from("quadras")
+    .select("*")
+    .eq("id", quadraId)
+    .single();
+  if (e1 || !original) throw new Error(e1?.message ?? "Quadra não encontrada");
+
+  let novoIdent =
+    opts.novoIdentificador?.trim() || `${original.identificador}-cópia`;
+
+  // Garante identificador único dentro do loteamento
+  for (let attempt = 1; attempt < 50; attempt++) {
+    const { data: existe } = await supabase
+      .from("quadras")
+      .select("id")
+      .eq("loteamento_id", original.loteamento_id)
+      .eq("identificador", novoIdent)
+      .maybeSingle();
+    if (!existe) break;
+    novoIdent = `${original.identificador}-cópia-${attempt + 1}`;
+  }
+
+  const { data: nova, error: e2 } = await supabase
+    .from("quadras")
+    .insert({
+      loteamento_id: original.loteamento_id,
+      identificador: novoIdent,
+      descricao: original.descricao,
+      imagem_url: original.imagem_url,
+    })
+    .select()
+    .single();
+  if (e2 || !nova) throw new Error(e2?.message ?? "Falha ao duplicar quadra");
+
+  if (opts.incluirLotes) {
+    const { data: lotes } = await supabase
+      .from("lotes")
+      .select("*")
+      .eq("quadra_id", quadraId);
+    if (lotes && lotes.length > 0) {
+      const novos = lotes.map((l) => {
+        const { id: _id, created_at: _ca, quadra_id: _qid, ...rest } = l;
+        void _id;
+        void _ca;
+        void _qid;
+        return {
+          ...rest,
+          quadra_id: nova.id,
+          status: "disponivel" as const,
+          data_entrega_real: null,
+          valor_venda: null,
+        };
+      });
+      await supabase.from("lotes").insert(novos);
+    }
+  }
+
+  revalidatePath(`/loteamentos/${original.loteamento_id}`);
+  revalidatePath(`/loteamentos/${original.loteamento_id}/quadras/${nova.id}`);
+  redirect(`/loteamentos/${original.loteamento_id}/quadras/${nova.id}`);
+}

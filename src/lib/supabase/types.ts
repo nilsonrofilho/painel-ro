@@ -57,12 +57,24 @@ export interface LoteRow {
   tipo_planta: string | null;
   planta_url: string | null;
   foto_url: string | null;
+  data_inicio_obra: string | null;
   previsao_entrega: string | null;
   data_entrega_real: string | null;
   responsavel_id: string | null;
   valor_venda: number | null;
   orcamento_total: number | null;
   observacoes: string | null;
+  created_at: string;
+}
+
+export interface MaterialRow {
+  id: string;
+  nome: string;
+  unidade: string | null;
+  categoria: string | null;
+  preco_referencia: number | null;
+  observacao: string | null;
+  ativo: boolean;
   created_at: string;
 }
 
@@ -127,6 +139,7 @@ export interface LancamentoMaterialRow {
   tipo: "entrada" | "saida";
   data: string;
   material: string;
+  material_id: string | null;
   quantidade: number;
   unidade: string | null;
   valor_unitario: number | null;
@@ -296,6 +309,12 @@ export interface Database {
         Update: GenericUpdate<DocumentoRow>;
         Relationships: [];
       };
+      materiais: {
+        Row: MaterialRow;
+        Insert: GenericInsert<MaterialRow> & { nome: string };
+        Update: GenericUpdate<MaterialRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -319,3 +338,4 @@ export type Funcionario = FuncionarioRow;
 export type Alocacao = AlocacaoRow;
 export type Corretor = CorretorRow;
 export type Documento = DocumentoRow;
+export type Material = MaterialRow;

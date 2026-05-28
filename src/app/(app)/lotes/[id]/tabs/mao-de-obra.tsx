@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
@@ -31,7 +31,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { KPICard } from "@/components/kpi-card";
-import { addAlocacao, deleteAlocacao } from "@/lib/actions/funcionarios";
+import {
+  addAlocacao,
+  updateAlocacao,
+  deleteAlocacao,
+} from "@/lib/actions/funcionarios";
 import { formatBRL, formatDateBR } from "@/lib/utils";
 import type { Alocacao, Funcionario, Lote } from "@/lib/supabase/types";
 
@@ -44,6 +48,7 @@ interface Props {
 export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [editing, setEditing] = React.useState<Alocacao | null>(null);
 
   const totalPago = alocacoes.reduce(
     (s, a) => s + Number(a.valor_pago ?? 0),
@@ -51,12 +56,12 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
   );
   const ativos = alocacoes.filter((a) => !a.data_fim).length;
 
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setSubmitting(true);
     try {
-      await addAlocacao({
+      const payload = {
         lote_id: lote.id,
         funcionario_id: String(fd.get("funcionario_id") ?? ""),
         funcao_no_lote: (fd.get("funcao_no_lote") as string) || null,
@@ -64,14 +69,35 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
         data_fim: (fd.get("data_fim") as string) || null,
         valor_pago: fd.get("valor_pago") ? Number(fd.get("valor_pago")) : null,
         observacao: (fd.get("observacao") as string) || null,
-      });
-      toast.success("Alocação criada");
-      setOpen(false);
+      };
+      if (editing) {
+        await updateAlocacao(editing.id, payload);
+        toast.success("Alocação atualizada");
+      } else {
+        await addAlocacao(payload);
+        toast.success("Alocação criada");
+      }
+      closeModal();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function openNew() {
+    setEditing(null);
+    setOpen(true);
+  }
+
+  function openEdit(a: Alocacao) {
+    setEditing(a);
+    setOpen(true);
+  }
+
+  function closeModal() {
+    setOpen(false);
+    setEditing(null);
   }
 
   async function handleDelete(id: string) {
@@ -105,7 +131,7 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
             </Button>
             <Button
               size="sm"
-              onClick={() => setOpen(true)}
+              onClick={openNew}
               disabled={funcionarios.length === 0}
             >
               <Plus className="h-4 w-4" />
@@ -130,7 +156,7 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
                   <TableHead>Função</TableHead>
                   <TableHead>Período</TableHead>
                   <TableHead className="text-right">Pago</TableHead>
-                  <TableHead className="w-12" />
+                  <TableHead className="w-20 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -161,14 +187,26 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
                         {formatBRL(Number(a.valor_pago ?? 0))}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(a.id)}
-                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(a)}
+                            className="h-7 w-7"
+                            aria-label="Editar alocação"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(a.id)}
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                            aria-label="Excluir alocação"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -179,18 +217,29 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : closeModal())}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova alocação</DialogTitle>
+            <DialogTitle>
+              {editing ? "Editar alocação" : "Nova alocação"}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAdd} className="space-y-3">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-3"
+            key={editing?.id ?? "novo"}
+          >
             <div className="space-y-1.5">
               <Label htmlFor="funcionario_id">Funcionário *</Label>
-              <Select id="funcionario_id" name="funcionario_id" required>
+              <Select
+                id="funcionario_id"
+                name="funcionario_id"
+                required
+                defaultValue={editing?.funcionario_id ?? ""}
+              >
                 <option value="">Selecione…</option>
                 {funcionarios
-                  .filter((f) => f.status === "ativo")
+                  .filter((f) => f.status === "ativo" || f.id === editing?.funcionario_id)
                   .map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.nome} {f.funcao ? `— ${f.funcao}` : ""}
@@ -204,16 +253,27 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
                 id="funcao_no_lote"
                 name="funcao_no_lote"
                 placeholder="Ex: Pedreiro chefe"
+                defaultValue={editing?.funcao_no_lote ?? ""}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="data_inicio">Início</Label>
-                <Input id="data_inicio" name="data_inicio" type="date" />
+                <Input
+                  id="data_inicio"
+                  name="data_inicio"
+                  type="date"
+                  defaultValue={editing?.data_inicio ?? ""}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="data_fim">Fim</Label>
-                <Input id="data_fim" name="data_fim" type="date" />
+                <Input
+                  id="data_fim"
+                  name="data_fim"
+                  type="date"
+                  defaultValue={editing?.data_fim ?? ""}
+                />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -223,24 +283,30 @@ export function MaoDeObraTab({ lote, alocacoes, funcionarios }: Props) {
                 name="valor_pago"
                 type="number"
                 step="0.01"
+                defaultValue={editing?.valor_pago ?? ""}
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="observacao">Observação</Label>
-              <Textarea id="observacao" name="observacao" rows={2} />
+              <Textarea
+                id="observacao"
+                name="observacao"
+                rows={2}
+                defaultValue={editing?.observacao ?? ""}
+              />
             </div>
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={closeModal}
                 disabled={submitting}
               >
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Salvar
+                {editing ? "Salvar" : "Adicionar"}
               </Button>
             </DialogFooter>
           </form>

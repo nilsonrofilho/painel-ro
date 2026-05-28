@@ -39,12 +39,13 @@ export const CATEGORIA_FORNECEDOR = {
 } as const;
 
 export const FUNCOES_OBRA = [
+  "Coordenador de obras",
+  "Engenheiro",
+  "Mestre de obra",
   "Pedreiro",
   "Servente",
   "Eletricista",
   "Encanador",
-  "Mestre de obra",
-  "Engenheiro",
   "Pintor",
   "Carpinteiro",
   "Outro",

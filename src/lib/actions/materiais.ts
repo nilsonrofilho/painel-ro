@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 const lancamentoSchema = z.object({
   lote_id: z.string().uuid(),
   fase_id: z.string().uuid().optional().nullable(),
+  material_id: z.string().uuid().optional().nullable(),
   tipo: z.enum(["entrada", "saida"]),
   data: z.string(),
   material: z.string().min(1, "Material obrigatório"),
@@ -52,6 +53,68 @@ export async function addLancamentoMaterial(input: LancamentoInput) {
   }
 
   revalidatePath(`/lotes/${parsed.lote_id}`);
+}
+
+export async function updateLancamentoMaterial(
+  id: string,
+  input: Partial<LancamentoInput>,
+) {
+  const supabase = await createClient();
+  // Snapshot do lançamento antes da alteração (para ajustar gasto da fase)
+  const { data: anterior } = await supabase
+    .from("lancamentos_material")
+    .select("fase_id, tipo, valor_total")
+    .eq("id", id)
+    .single();
+
+  const { data, error } = await supabase
+    .from("lancamentos_material")
+    .update(clean(input as Record<string, unknown>))
+    .eq("id", id)
+    .select("lote_id, fase_id, tipo, valor_total")
+    .single();
+  if (error) throw new Error(error.message);
+
+  if (anterior && data) {
+    // Subtrai o valor antigo da fase original
+    if (anterior.fase_id && anterior.tipo === "saida") {
+      const { data: faseAnt } = await supabase
+        .from("fases_obra")
+        .select("gasto")
+        .eq("id", anterior.fase_id)
+        .single();
+      if (faseAnt) {
+        await supabase
+          .from("fases_obra")
+          .update({
+            gasto: Math.max(
+              0,
+              Number(faseAnt.gasto ?? 0) - Number(anterior.valor_total),
+            ),
+          })
+          .eq("id", anterior.fase_id);
+      }
+    }
+    // Adiciona o novo valor na fase atual (pode ter mudado)
+    if (data.fase_id && data.tipo === "saida") {
+      const { data: faseNova } = await supabase
+        .from("fases_obra")
+        .select("gasto")
+        .eq("id", data.fase_id)
+        .single();
+      if (faseNova) {
+        await supabase
+          .from("fases_obra")
+          .update({
+            gasto:
+              Number(faseNova.gasto ?? 0) + Number(data.valor_total),
+          })
+          .eq("id", data.fase_id);
+      }
+    }
+  }
+
+  if (data) revalidatePath(`/lotes/${data.lote_id}`);
 }
 
 export async function deleteLancamento(id: string, loteId: string) {

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { BackButton } from "@/components/back-button";
 import { PageHeader } from "@/components/page-header";
 import { QuadraCard } from "@/components/quadra-card";
 import { StatusLoteamentoBadge } from "@/components/status-badge";
@@ -49,7 +50,8 @@ export default async function LoteamentoDetalhePage({ params }: PageProps) {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-2">
+        <BackButton />
         <Breadcrumb
           items={[
             { label: "Loteamentos", href: "/loteamentos" },

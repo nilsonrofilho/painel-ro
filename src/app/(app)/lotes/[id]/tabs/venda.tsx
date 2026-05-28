@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, ShoppingCart, X } from "lucide-react";
+import { Loader2, Pencil, ShoppingCart, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
@@ -34,7 +34,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { reservarLote, venderLote, cancelarVenda } from "@/lib/actions/vendas";
+import {
+  reservarLote,
+  venderLote,
+  updateVenda,
+  cancelarVenda,
+} from "@/lib/actions/vendas";
 import { formatBRL, formatDateBR } from "@/lib/utils";
 import type { Corretor, Lote, Venda } from "@/lib/supabase/types";
 
@@ -62,6 +67,7 @@ interface Props {
 
 export function VendaTab({ lote, vendas, corretores }: Props) {
   const [open, setOpen] = React.useState<"reserva" | "venda" | null>(null);
+  const [editing, setEditing] = React.useState<Venda | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const vendaAtiva = vendas.find((v) => v.status === "ativa");
 
@@ -80,6 +86,7 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
   });
 
   function openModal(tipo: "reserva" | "venda") {
+    setEditing(null);
     reset({
       cliente_nome: "",
       cliente_cpf: "",
@@ -94,6 +101,29 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
       observacao: "",
     });
     setOpen(tipo);
+  }
+
+  function openEdit(v: Venda) {
+    setEditing(v);
+    reset({
+      cliente_nome: v.cliente_nome ?? "",
+      cliente_cpf: v.cliente_cpf ?? "",
+      cliente_telefone: v.cliente_telefone ?? "",
+      cliente_email: v.cliente_email ?? "",
+      corretor_id: v.corretor_id ?? "",
+      comissao_pct: v.comissao_pct?.toString() ?? "",
+      valor: v.valor?.toString() ?? "",
+      valor_sinal: v.valor_sinal?.toString() ?? "",
+      forma_pagamento: v.forma_pagamento ?? "",
+      data: v.data ?? new Date().toISOString().slice(0, 10),
+      observacao: v.observacao ?? "",
+    });
+    setOpen(v.tipo);
+  }
+
+  function closeModal() {
+    setOpen(null);
+    setEditing(null);
   }
 
   async function onSubmit(values: FormValues) {
@@ -128,14 +158,23 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
         observacao: values.observacao || null,
       };
 
-      if (open === "reserva") {
+      if (editing) {
+        // edição: não troca tipo nem cria novo registro
+        const { lote_id: _l, tipo: _t, ...patch } = payload;
+        void _l;
+        void _t;
+        await updateVenda(editing.id, patch);
+        toast.success(
+          editing.tipo === "venda" ? "Venda atualizada" : "Reserva atualizada",
+        );
+      } else if (open === "reserva") {
         await reservarLote(payload);
         toast.success("Lote reservado");
       } else {
         await venderLote(payload);
         toast.success("Venda registrada");
       }
-      setOpen(null);
+      closeModal();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
@@ -241,7 +280,15 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
                 {vendaAtiva.observacao}
               </p>
             )}
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openEdit(vendaAtiva)}
+              >
+                <Pencil className="h-4 w-4" />
+                Editar dados
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -312,16 +359,24 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
       </Card>
 
       {/* Modal */}
-      <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
+      <Dialog open={!!open} onOpenChange={(v) => !v && closeModal()}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {open === "venda" ? "Registrar venda" : "Registrar reserva"}
+              {editing
+                ? editing.tipo === "venda"
+                  ? "Editar venda"
+                  : "Editar reserva"
+                : open === "venda"
+                  ? "Registrar venda"
+                  : "Registrar reserva"}
             </DialogTitle>
             <DialogDescription>
-              {open === "venda"
-                ? "Marca o lote como vendido."
-                : "Reserva o lote para um cliente."}
+              {editing
+                ? "Atualize os dados do registro. O lote permanece no mesmo status."
+                : open === "venda"
+                  ? "Marca o lote como vendido."
+                  : "Reserva o lote para um cliente."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -424,7 +479,7 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(null)}
+                onClick={closeModal}
                 disabled={submitting}
               >
                 Cancelar
@@ -435,7 +490,11 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
                 disabled={submitting}
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {open === "venda" ? "Confirmar venda" : "Confirmar reserva"}
+                {editing
+                  ? "Salvar alterações"
+                  : open === "venda"
+                    ? "Confirmar venda"
+                    : "Confirmar reserva"}
               </Button>
             </DialogFooter>
           </form>

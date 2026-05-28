@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Loader2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
@@ -34,6 +34,7 @@ import { FileUpload } from "@/components/file-upload";
 import { KPICard } from "@/components/kpi-card";
 import {
   addLancamentoMaterial,
+  updateLancamentoMaterial,
   deleteLancamento,
 } from "@/lib/actions/materiais";
 import { formatBRL, formatDateBR } from "@/lib/utils";
@@ -42,6 +43,7 @@ import type {
   Fornecedor,
   LancamentoMaterial,
   Lote,
+  Material,
 } from "@/lib/supabase/types";
 
 interface Props {
@@ -49,14 +51,23 @@ interface Props {
   materiais: LancamentoMaterial[];
   fases: FaseObra[];
   fornecedores: Fornecedor[];
+  catalogo: Material[];
 }
 
-export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
+export function MateriaisTab({
+  lote,
+  materiais,
+  fases,
+  fornecedores,
+  catalogo,
+}: Props) {
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [tipo, setTipo] = React.useState<"entrada" | "saida">("entrada");
   const [filtroTipo, setFiltroTipo] = React.useState<"todos" | "entrada" | "saida">("todos");
   const [nfUrl, setNfUrl] = React.useState<string | null>(null);
+  const [editing, setEditing] = React.useState<LancamentoMaterial | null>(null);
+  const [materialIdSelecionado, setMaterialIdSelecionado] = React.useState<string>("");
 
   const filtrados = React.useMemo(() => {
     if (filtroTipo === "todos") return materiais;
@@ -70,7 +81,7 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
     .filter((m) => m.tipo === "saida")
     .reduce((s, m) => s + Number(m.valor_total), 0);
 
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setSubmitting(true);
@@ -84,9 +95,10 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
         : valorUnit && quantidade
           ? valorUnit * quantidade
           : 0;
-      await addLancamentoMaterial({
+      const payload = {
         lote_id: lote.id,
         fase_id: (fd.get("fase_id") as string) || null,
+        material_id: materialIdSelecionado || null,
         tipo,
         data: (fd.get("data") as string) ?? new Date().toISOString().slice(0, 10),
         material: String(fd.get("material") ?? ""),
@@ -98,15 +110,43 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
         nota_fiscal_numero: (fd.get("nota_fiscal_numero") as string) || null,
         nota_fiscal_url: nfUrl,
         observacao: (fd.get("observacao") as string) || null,
-      });
-      toast.success("Lançamento adicionado");
-      setOpen(false);
-      setNfUrl(null);
+      };
+      if (editing) {
+        await updateLancamentoMaterial(editing.id, payload);
+        toast.success("Lançamento atualizado");
+      } else {
+        await addLancamentoMaterial(payload);
+        toast.success("Lançamento adicionado");
+      }
+      closeModal();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function openNew() {
+    setEditing(null);
+    setTipo("entrada");
+    setNfUrl(null);
+    setMaterialIdSelecionado("");
+    setOpen(true);
+  }
+
+  function openEdit(l: LancamentoMaterial) {
+    setEditing(l);
+    setTipo(l.tipo);
+    setNfUrl(l.nota_fiscal_url);
+    setMaterialIdSelecionado(l.material_id ?? "");
+    setOpen(true);
+  }
+
+  function closeModal() {
+    setOpen(false);
+    setEditing(null);
+    setNfUrl(null);
+    setMaterialIdSelecionado("");
   }
 
   async function handleDelete(id: string) {
@@ -154,13 +194,7 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
               <option value="entrada">Entradas</option>
               <option value="saida">Saídas</option>
             </Select>
-            <Button
-              size="sm"
-              onClick={() => {
-                setTipo("entrada");
-                setOpen(true);
-              }}
-            >
+            <Button size="sm" onClick={openNew}>
               <Plus className="h-4 w-4" />
               Novo lançamento
             </Button>
@@ -182,7 +216,7 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                   <TableHead className="text-right">Vlr unit.</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>NF</TableHead>
-                  <TableHead className="w-12" />
+                  <TableHead className="w-20 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,14 +268,26 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(m.id)}
-                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(m)}
+                            className="h-7 w-7"
+                            aria-label="Editar lançamento"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(m.id)}
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                            aria-label="Excluir lançamento"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -252,13 +298,19 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
         </CardContent>
       </Card>
 
-      {/* Modal */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* Modal nova/editar lançamento */}
+      <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : closeModal())}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Novo lançamento de material</DialogTitle>
+            <DialogTitle>
+              {editing ? "Editar lançamento" : "Novo lançamento de material"}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAdd} className="space-y-3">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-3"
+            key={editing?.id ?? "novo"}
+          >
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Tipo *</Label>
@@ -276,19 +328,70 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                   id="data"
                   name="data"
                   type="date"
-                  defaultValue={new Date().toISOString().slice(0, 10)}
+                  defaultValue={
+                    editing?.data ?? new Date().toISOString().slice(0, 10)
+                  }
                   required
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="material">Material *</Label>
-              <Input
-                id="material"
-                name="material"
-                required
-                placeholder="Ex: Cimento CPII"
-              />
+            <div className="grid grid-cols-[1fr_220px] gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="material">Material *</Label>
+                <Input
+                  id="material"
+                  name="material"
+                  required
+                  list="catalogo-materiais"
+                  placeholder="Digite ou selecione do catálogo"
+                  defaultValue={editing?.material ?? ""}
+                />
+                <datalist id="catalogo-materiais">
+                  {catalogo
+                    .filter((m) => m.ativo)
+                    .map((m) => (
+                      <option key={m.id} value={m.nome} />
+                    ))}
+                </datalist>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="material_id_select">Vínculo com catálogo</Label>
+                <Select
+                  id="material_id_select"
+                  value={materialIdSelecionado}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setMaterialIdSelecionado(id);
+                    if (id) {
+                      const m = catalogo.find((x) => x.id === id);
+                      if (m) {
+                        const nomeEl = document.getElementById(
+                          "material",
+                        ) as HTMLInputElement | null;
+                        const unidEl = document.getElementById(
+                          "unidade",
+                        ) as HTMLInputElement | null;
+                        const vuEl = document.getElementById(
+                          "valor_unitario",
+                        ) as HTMLInputElement | null;
+                        if (nomeEl) nomeEl.value = m.nome;
+                        if (unidEl && m.unidade) unidEl.value = m.unidade;
+                        if (vuEl && m.preco_referencia)
+                          vuEl.value = String(m.preco_referencia);
+                      }
+                    }
+                  }}
+                >
+                  <option value="">— sem vínculo —</option>
+                  {catalogo
+                    .filter((m) => m.ativo)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nome}
+                      </option>
+                    ))}
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
@@ -299,6 +402,7 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                   type="number"
                   step="0.01"
                   required
+                  defaultValue={editing?.quantidade ?? ""}
                 />
               </div>
               <div className="space-y-1.5">
@@ -307,6 +411,7 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                   id="unidade"
                   name="unidade"
                   placeholder="kg, m³, un…"
+                  defaultValue={editing?.unidade ?? ""}
                 />
               </div>
               <div className="space-y-1.5">
@@ -316,6 +421,7 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                   name="valor_unitario"
                   type="number"
                   step="0.01"
+                  defaultValue={editing?.valor_unitario ?? ""}
                 />
               </div>
             </div>
@@ -328,11 +434,16 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                   type="number"
                   step="0.01"
                   placeholder="Auto se vazio"
+                  defaultValue={editing?.valor_total ?? ""}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="fase_id">Fase</Label>
-                <Select id="fase_id" name="fase_id">
+                <Select
+                  id="fase_id"
+                  name="fase_id"
+                  defaultValue={editing?.fase_id ?? ""}
+                >
                   <option value="">—</option>
                   {fases.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -345,7 +456,11 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="fornecedor_id">Fornecedor</Label>
-                <Select id="fornecedor_id" name="fornecedor_id">
+                <Select
+                  id="fornecedor_id"
+                  name="fornecedor_id"
+                  defaultValue={editing?.fornecedor_id ?? ""}
+                >
                   <option value="">—</option>
                   {fornecedores.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -359,6 +474,7 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
                 <Input
                   id="nota_fiscal_numero"
                   name="nota_fiscal_numero"
+                  defaultValue={editing?.nota_fiscal_numero ?? ""}
                 />
               </div>
             </div>
@@ -374,20 +490,25 @@ export function MateriaisTab({ lote, materiais, fases, fornecedores }: Props) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="observacao">Observação</Label>
-              <Textarea id="observacao" name="observacao" rows={2} />
+              <Textarea
+                id="observacao"
+                name="observacao"
+                rows={2}
+                defaultValue={editing?.observacao ?? ""}
+              />
             </div>
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={closeModal}
                 disabled={submitting}
               >
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Adicionar
+                {editing ? "Salvar" : "Adicionar"}
               </Button>
             </DialogFooter>
           </form>

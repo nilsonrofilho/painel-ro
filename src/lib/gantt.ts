@@ -33,7 +33,7 @@ export async function getGanttData(): Promise<{
   const { data } = await supabase
     .from("lotes")
     .select(
-      "id, numero, status, etapa, previsao_entrega, data_entrega_real, quadra:quadras(identificador, loteamento:loteamentos(id, nome, data_inicio, previsao_entrega))",
+      "id, numero, status, etapa, data_inicio_obra, previsao_entrega, data_entrega_real, quadra:quadras(identificador, loteamento:loteamentos(id, nome, data_inicio, previsao_entrega))",
     )
     .order("created_at", { ascending: true });
 
@@ -52,9 +52,12 @@ export async function getGanttData(): Promise<{
     } | null;
     if (!quadra?.loteamento) continue;
 
-    const start = quadra.loteamento.data_inicio
-      ? new Date(quadra.loteamento.data_inicio)
-      : null;
+    // Prefere a data de início específica do lote; cai pra do loteamento
+    const start = l.data_inicio_obra
+      ? new Date(l.data_inicio_obra)
+      : quadra.loteamento.data_inicio
+        ? new Date(quadra.loteamento.data_inicio)
+        : null;
     const end = l.previsao_entrega
       ? new Date(l.previsao_entrega)
       : quadra.loteamento.previsao_entrega

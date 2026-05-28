@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { BackButton } from "@/components/back-button";
 import { StatusLoteBadge } from "@/components/status-badge";
 import { EtapaProgress } from "@/components/etapa-progress";
 import {
@@ -28,11 +29,13 @@ import {
   getCorretores,
   getFornecedores,
   getFuncionarios,
+  getMateriaisCatalogo,
   getGastosTotaisLote,
 } from "@/lib/queries";
 import { formatBRL, formatDateBR } from "@/lib/utils";
 import { ETAPAS_OBRA } from "@/lib/constants";
 import { DeleteLoteButton } from "./delete-button";
+import { DuplicarLoteButton } from "./duplicar-button";
 import { VisaoGeralTab } from "./tabs/visao-geral";
 import { VendaTab } from "./tabs/venda";
 import { ObraCustosTab } from "./tabs/obra-custos";
@@ -53,24 +56,36 @@ export default async function LoteDetalhePage({ params }: Props) {
   if (!contexto) notFound();
   const { lote, quadra, loteamento } = contexto;
 
-  const [vendas, fases, materiais, alocacoes, documentos, corretores, fornecedores, funcionarios, gastoTotal] =
-    await Promise.all([
-      getVendasDoLote(id),
-      getFasesDoLote(id),
-      getMateriaisDoLote(id),
-      getAlocacoesDoLote(id),
-      getDocumentosDoLote(id),
-      getCorretores(),
-      getFornecedores(),
-      getFuncionarios(),
-      getGastosTotaisLote(id),
-    ]);
+  const [
+    vendas,
+    fases,
+    materiais,
+    alocacoes,
+    documentos,
+    corretores,
+    fornecedores,
+    funcionarios,
+    catalogoMateriais,
+    gastoTotal,
+  ] = await Promise.all([
+    getVendasDoLote(id),
+    getFasesDoLote(id),
+    getMateriaisDoLote(id),
+    getAlocacoesDoLote(id),
+    getDocumentosDoLote(id),
+    getCorretores(),
+    getFornecedores(),
+    getFuncionarios(),
+    getMateriaisCatalogo(),
+    getGastosTotaisLote(id),
+  ]);
 
   const etapaCfg = ETAPAS_OBRA[lote.etapa ?? "planejamento"];
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-2">
+        <BackButton />
         <Breadcrumb
           items={[
             { label: "Loteamentos", href: "/loteamentos" },
@@ -123,6 +138,7 @@ export default async function LoteDetalhePage({ params }: Props) {
                     Editar
                   </Link>
                 </Button>
+                <DuplicarLoteButton loteId={id} numero={lote.numero} />
                 <DeleteLoteButton id={id} numero={lote.numero} />
               </div>
             </div>
@@ -217,6 +233,7 @@ export default async function LoteDetalhePage({ params }: Props) {
             materiais={materiais}
             fases={fases}
             fornecedores={fornecedores}
+            catalogo={catalogoMateriais}
           />
         </TabsContent>
         <TabsContent value="mao-de-obra">

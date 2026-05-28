@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { BackButton } from "@/components/back-button";
 import { PageHeader } from "@/components/page-header";
 import { KPICard } from "@/components/kpi-card";
 import { LoteCard } from "@/components/lote-card";
 import { getLoteamento, getQuadra, getLotesDaQuadra } from "@/lib/queries";
 import { DeleteQuadraButton } from "./delete-button";
+import { DuplicarQuadraButton } from "./duplicar-button";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +41,8 @@ export default async function QuadraDetalhePage({ params }: Props) {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-2">
+        <BackButton />
         <Breadcrumb
           items={[
             { label: "Loteamentos", href: "/loteamentos" },
@@ -64,13 +67,17 @@ export default async function QuadraDetalhePage({ params }: Props) {
               </p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href={`/loteamentos/${id}/quadras/${qid}/editar`}>
                 <Pencil className="h-4 w-4" />
                 Editar
               </Link>
             </Button>
+            <DuplicarQuadraButton
+              quadraId={qid}
+              identificador={quadra.identificador}
+            />
             <DeleteQuadraButton
               id={qid}
               identificador={quadra.identificador}

@@ -85,6 +85,24 @@ export async function addAlocacao(input: z.infer<typeof alocacaoSchema>) {
   revalidatePath(`/funcionarios/${parsed.funcionario_id}`);
 }
 
+export async function updateAlocacao(
+  id: string,
+  input: Partial<z.infer<typeof alocacaoSchema>>,
+) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("alocacoes")
+    .update(clean(input as Record<string, unknown>))
+    .eq("id", id)
+    .select("lote_id, funcionario_id")
+    .single();
+  if (error) throw new Error(error.message);
+  if (data) {
+    revalidatePath(`/lotes/${data.lote_id}`);
+    revalidatePath(`/funcionarios/${data.funcionario_id}`);
+  }
+}
+
 export async function deleteAlocacao(id: string, loteId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("alocacoes").delete().eq("id", id);
