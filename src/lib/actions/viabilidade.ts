@@ -135,6 +135,40 @@ export async function duplicarViabilidade(id: string) {
       }),
     );
   }
+
+  // Copia ITBI por cidade
+  const { data: itbis } = await supabase
+    .from("viabilidade_custos_itbi")
+    .select("*")
+    .eq("estudo_id", id);
+  if (itbis && itbis.length) {
+    await supabase.from("viabilidade_custos_itbi").insert(
+      itbis.map((it) => {
+        const { id: _iid, estudo_id: _ie, ...ir } = it;
+        void _iid;
+        void _ie;
+        return { ...ir, estudo_id: novo.id };
+      }),
+    );
+  }
+
+  // Copia fluxo de caixa
+  const { data: fluxos } = await supabase
+    .from("viabilidade_fluxo")
+    .select("*")
+    .eq("estudo_id", id);
+  if (fluxos && fluxos.length) {
+    await supabase.from("viabilidade_fluxo").insert(
+      fluxos.map((f) => {
+        const { id: _fid, created_at: _fca, estudo_id: _fe, ...fr } = f;
+        void _fid;
+        void _fca;
+        void _fe;
+        return { ...fr, estudo_id: novo.id };
+      }),
+    );
+  }
+
   revalidatePath("/viabilidade");
   redirect(`/viabilidade/${novo.id}`);
 }
@@ -243,15 +277,16 @@ export async function deleteCustoItbi(id: string, estudoId: string) {
 /** Marca uma cidade como a selecionada (desmarca as demais do estudo). */
 export async function selecionarCidadeItbi(id: string, estudoId: string) {
   const supabase = await createClient();
-  await supabase
+  const { error: e1 } = await supabase
     .from("viabilidade_custos_itbi")
     .update({ selecionado: false })
     .eq("estudo_id", estudoId);
-  const { error } = await supabase
+  if (e1) throw new Error(e1.message);
+  const { error: e2 } = await supabase
     .from("viabilidade_custos_itbi")
     .update({ selecionado: true })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (e2) throw new Error(e2.message);
   revalidarEstudo(estudoId);
 }
 

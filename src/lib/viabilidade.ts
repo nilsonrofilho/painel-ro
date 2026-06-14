@@ -282,13 +282,22 @@ export function calcTIRAnualPct(fluxo: FluxoPeriodo[]): number | null {
   return (Math.pow(1 + m, 12) - 1) * 100;
 }
 
-/** Payback simples: primeiro período com saldo acumulado >= 0. null se nunca. */
+/**
+ * Payback simples (em períodos), com interpolação linear dentro do período
+ * em que o saldo cruza zero. Ex: [-100, 60, 50] → ~1.8. null se nunca recupera.
+ */
 export function calcPaybackSimples(fluxo: FluxoPeriodo[]): number | null {
   const fcs = fcOrdenado(fluxo);
   let acc = 0;
   for (let t = 0; t < fcs.length; t++) {
+    const anterior = acc;
     acc += fcs[t];
-    if (acc >= 0) return t;
+    if (acc >= 0) {
+      if (t === 0) return 0;
+      // fração do período t onde o acumulado cruza zero
+      const fracao = fcs[t] !== 0 ? Math.abs(anterior) / Math.abs(fcs[t]) : 0;
+      return t - 1 + fracao;
+    }
   }
   return null;
 }
@@ -307,7 +316,11 @@ export function calcPaybackDescontado(
   return null;
 }
 
-/** Exposição máxima de caixa: maior saldo acumulado negativo (capital próprio). */
+/**
+ * Exposição máxima de caixa: maior necessidade de capital próprio ao longo do
+ * projeto. Retornada como valor POSITIVO (capital a aportar). 0 se nunca fica
+ * negativo.
+ */
 export function calcExposicaoMaxima(fluxo: FluxoPeriodo[]): number {
   const fcs = fcOrdenado(fluxo);
   let acc = 0;
@@ -316,7 +329,7 @@ export function calcExposicaoMaxima(fluxo: FluxoPeriodo[]): number {
     acc += fc;
     if (acc < min) min = acc;
   }
-  return min; // valor <= 0
+  return Math.abs(min); // capital próprio necessário (>= 0)
 }
 
 /** Série de saldo acumulado (para gráfico de linha). */
