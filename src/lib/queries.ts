@@ -303,7 +303,10 @@ export async function getDiariosDoLote(
   return (data ?? []) as import("@/lib/supabase/types").DiarioObra[];
 }
 
-export async function getDashboardStats(filtro?: FiltroLote) {
+export async function getDashboardStats(
+  filtro?: FiltroLote,
+  periodo?: { inicio: string | null; fim: string | null },
+) {
   const supabase = await createClient();
   const loteIds = filtro ? await resolverLoteIds(filtro) : null;
 
@@ -351,23 +354,28 @@ export async function getDashboardStats(filtro?: FiltroLote) {
     },
   );
 
+  // Janela do período: usa o período informado ou cai no mês atual
   const now = new Date();
-  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
-  const vendasMes = (vendas ?? []).filter(
-    (v) =>
-      v.tipo === "venda" &&
-      v.status !== "cancelada" &&
-      v.data &&
-      new Date(v.data) >= inicioMes,
-  );
-  const valorMes = vendasMes.reduce((s, v) => s + Number(v.valor ?? 0), 0);
+  const inicio = periodo?.inicio
+    ? new Date(periodo.inicio + "T00:00:00")
+    : new Date(now.getFullYear(), now.getMonth(), 1);
+  const fim = periodo?.fim ? new Date(periodo.fim + "T23:59:59") : null;
+
+  const vendasPeriodo = (vendas ?? []).filter((v) => {
+    if (v.tipo !== "venda" || v.status === "cancelada" || !v.data) return false;
+    const d = new Date(v.data);
+    if (d < inicio) return false;
+    if (fim && d > fim) return false;
+    return true;
+  });
+  const valorMes = vendasPeriodo.reduce((s, v) => s + Number(v.valor ?? 0), 0);
 
   return {
     totalLoteamentos,
     ...stats,
     pctVendas: stats.total > 0 ? (stats.vendidos / stats.total) * 100 : 0,
     valorMes,
-    vendasMes: vendasMes.length,
+    vendasMes: vendasPeriodo.length,
   };
 }
 

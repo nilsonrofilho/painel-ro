@@ -190,11 +190,14 @@ export async function getObrasAtrasadas(
   return (data ?? []) as unknown as ObraAtrasada[];
 }
 
-export async function getGastosMesAtual(filtro?: FiltroLote) {
+export async function getGastosMesAtual(
+  filtro?: FiltroLote,
+  periodo?: { inicio: string | null; fim: string | null },
+) {
   const supabase = await createClient();
-  const inicio = new Date();
-  inicio.setDate(1);
-  const inicioStr = inicio.toISOString().slice(0, 10);
+  const inicioPadrao = new Date();
+  inicioPadrao.setDate(1);
+  const inicioStr = periodo?.inicio ?? inicioPadrao.toISOString().slice(0, 10);
   const loteIds = filtro ? await resolverLoteIds(filtro) : null;
 
   let query = supabase
@@ -202,6 +205,7 @@ export async function getGastosMesAtual(filtro?: FiltroLote) {
     .select("tipo, valor_total, data, lote_id")
     .eq("tipo", "saida")
     .gte("data", inicioStr);
+  if (periodo?.fim) query = query.lte("data", periodo.fim);
   if (loteIds !== null) {
     if (loteIds.length === 0) return 0;
     query = query.in("lote_id", loteIds);

@@ -1,6 +1,10 @@
+"use client";
+
 import * as React from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useValores } from "@/components/valores-provider";
 
 interface KPICardProps {
   label: string;
@@ -9,6 +13,10 @@ interface KPICardProps {
   icon?: React.ReactNode;
   variant?: "default" | "success" | "warning" | "destructive" | "accent" | "primary";
   trend?: { value: number; label?: string };
+  /** Se definido, o card vira um link clicável (drill-down). */
+  href?: string;
+  /** Se true, o valor é mascarado quando o modo "ocultar valores" está ligado. */
+  currency?: boolean;
 }
 
 const variantStyles: Record<NonNullable<KPICardProps["variant"]>, string> = {
@@ -36,21 +44,35 @@ export function KPICard({
   icon,
   variant = "default",
   trend,
+  href,
+  currency = false,
 }: KPICardProps) {
-  return (
-    <Card className={cn("transition-shadow hover:shadow-md", variantStyles[variant])}>
+  const { oculto } = useValores();
+  const mostrarValor = currency && oculto ? "R$ ••••••" : value;
+
+  const inner = (
+    <Card
+      className={cn(
+        "h-full transition-all",
+        variantStyles[variant],
+        href ? "hover:-translate-y-0.5 hover:shadow-md" : "hover:shadow-md",
+      )}
+    >
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {label}
             </p>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              {value}
+            <p
+              className={cn(
+                "mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl",
+                currency && oculto && "tracking-wider text-muted-foreground",
+              )}
+            >
+              {mostrarValor}
             </p>
-            {hint && (
-              <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-            )}
+            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
             {trend && (
               <p
                 className={cn(
@@ -77,4 +99,13 @@ export function KPICard({
       </CardContent>
     </Card>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="group block">
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
 }

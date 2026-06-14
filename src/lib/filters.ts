@@ -18,6 +18,68 @@ export function parseFiltro(params?: {
   return { loteamentoId, loteId };
 }
 
+// ============================================================
+// Filtro de período (data)
+// ============================================================
+export type PeriodoPreset =
+  | "mes"
+  | "30d"
+  | "90d"
+  | "ano"
+  | "tudo";
+
+export interface Periodo {
+  preset: PeriodoPreset;
+  inicio: string | null; // YYYY-MM-DD (null = sem limite inferior)
+  fim: string | null;
+  label: string;
+}
+
+const PRESET_LABEL: Record<PeriodoPreset, string> = {
+  mes: "Mês atual",
+  "30d": "Últimos 30 dias",
+  "90d": "Últimos 90 dias",
+  ano: "Ano atual",
+  tudo: "Todo o período",
+};
+
+/**
+ * Resolve o intervalo de datas de um preset. `hoje` é injetável para testes;
+ * por padrão usa a data atual (chamado em server components dinâmicos).
+ */
+export function resolverPeriodo(
+  preset: PeriodoPreset | undefined,
+  hoje: Date = new Date(),
+): Periodo {
+  const p = preset ?? "mes";
+  const fim = hoje.toISOString().slice(0, 10);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+  if (p === "tudo") {
+    return { preset: "tudo", inicio: null, fim: null, label: PRESET_LABEL.tudo };
+  }
+  if (p === "ano") {
+    const ini = new Date(hoje.getFullYear(), 0, 1);
+    return { preset: "ano", inicio: iso(ini), fim, label: PRESET_LABEL.ano };
+  }
+  if (p === "30d" || p === "90d") {
+    const dias = p === "30d" ? 30 : 90;
+    const ini = new Date(hoje);
+    ini.setDate(ini.getDate() - dias);
+    return { preset: p, inicio: iso(ini), fim, label: PRESET_LABEL[p] };
+  }
+  // mes (default)
+  const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  return { preset: "mes", inicio: iso(ini), fim, label: PRESET_LABEL.mes };
+}
+
+export function parsePeriodo(params?: { periodo?: string }): PeriodoPreset {
+  const v = params?.periodo?.trim();
+  if (v === "mes" || v === "30d" || v === "90d" || v === "ano" || v === "tudo")
+    return v;
+  return "mes";
+}
+
 /**
  * Resolve o loteamento_id ao qual um lote pertence (via quadra).
  * Retorna null se o lote não existe.

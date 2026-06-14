@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Loader2, FileText, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Loader2, FileText, ExternalLink, Download } from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
@@ -142,15 +142,25 @@ export function DocumentosTab({ lote, documentos }: Props) {
                     <p className="mt-2 text-[10px] text-muted-foreground">
                       Enviado em {formatDateTimeBR(d.uploaded_at)}
                     </p>
-                    <a
-                      href={d.arquivo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Abrir
-                    </a>
+                    <div className="mt-2 flex items-center gap-3">
+                      <a
+                        href={d.arquivo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Abrir
+                      </a>
+                      <a
+                        href={d.arquivo_url}
+                        download={d.nome}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                      >
+                        <Download className="h-3 w-3" />
+                        Baixar
+                      </a>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

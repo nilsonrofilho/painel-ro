@@ -30,20 +30,37 @@ import {
 import {
   getOpcoesFiltro,
   parseFiltro,
+  parsePeriodo,
+  resolverPeriodo,
   type OpcaoLoteamento,
   type OpcaoLote,
 } from "@/lib/filters";
 import { FiltroLoteamentoLote } from "@/components/filtro-loteamento-lote";
+import { FiltroPeriodo } from "@/components/filtro-periodo";
 import { formatBRL, formatDateBR, formatPercent } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ loteamento?: string; lote?: string }>;
+  searchParams: Promise<{
+    loteamento?: string;
+    lote?: string;
+    periodo?: string;
+  }>;
 }
 
 export default async function DashboardPage({ searchParams }: Props) {
-  const filtro = parseFiltro(await searchParams);
+  const sp = await searchParams;
+  const filtro = parseFiltro(sp);
+  const periodo = resolverPeriodo(parsePeriodo(sp));
+  const janela = { inicio: periodo.inicio, fim: periodo.fim };
+
+  // Querystring base para preservar filtros nos links de drill-down
+  const qs = new URLSearchParams();
+  if (filtro.loteamentoId) qs.set("loteamento", filtro.loteamentoId);
+  if (filtro.loteId) qs.set("lote", filtro.loteId);
+  const sufixo = qs.toString() ? `?${qs.toString()}` : "";
+
   const [
     stats,
     statusDist,
@@ -54,12 +71,12 @@ export default async function DashboardPage({ searchParams }: Props) {
     ultimasVendas,
     opcoes,
   ] = await Promise.all([
-    getDashboardStats(filtro),
+    getDashboardStats(filtro, janela),
     getDistribuicaoStatusLotes(filtro),
     getVendasPorMes(12, filtro),
     getGastosPorLoteamento(filtro),
     getObrasAtrasadas(filtro),
-    getGastosMesAtual(filtro),
+    getGastosMesAtual(filtro, janela),
     getVendasUltimas(5, filtro),
     getOpcoesFiltro(),
   ]);
@@ -97,11 +114,12 @@ export default async function DashboardPage({ searchParams }: Props) {
         }
       />
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <FiltroLoteamentoLote
           loteamentos={opcoes.loteamentos}
           lotes={opcoes.lotes}
         />
+        <FiltroPeriodo />
       </div>
 
       {/* KPIs principais */}
@@ -111,29 +129,34 @@ export default async function DashboardPage({ searchParams }: Props) {
           value={stats.totalLoteamentos}
           icon={<Building2 className="h-5 w-5" />}
           variant="primary"
+          href="/loteamentos"
         />
         <KPICard
           label="Total de lotes"
           value={stats.total}
           icon={<Home className="h-5 w-5" />}
+          href="/loteamentos"
         />
         <KPICard
           label="Disponíveis"
           value={stats.disponiveis}
           icon={<Home className="h-5 w-5" />}
           variant="success"
+          href="/loteamentos"
         />
         <KPICard
           label="Reservados"
           value={stats.reservados}
           icon={<Home className="h-5 w-5" />}
           variant="warning"
+          href="/loteamentos"
         />
         <KPICard
           label="Vendidos"
           value={stats.vendidos}
           icon={<TrendingUp className="h-5 w-5" />}
           variant="primary"
+          href="/loteamentos"
         />
         <KPICard
           label="% Vendido"
@@ -142,17 +165,21 @@ export default async function DashboardPage({ searchParams }: Props) {
           variant="accent"
         />
         <KPICard
-          label="Vendido no mês"
+          label={`Vendido — ${periodo.label.toLowerCase()}`}
           value={formatBRL(stats.valorMes)}
           hint={`${stats.vendasMes} venda(s)`}
           icon={<CircleDollarSign className="h-5 w-5" />}
           variant="primary"
+          currency
+          href={`/relatorios${sufixo}`}
         />
         <KPICard
-          label="Gasto no mês"
+          label={`Gasto — ${periodo.label.toLowerCase()}`}
           value={formatBRL(gastoMesAtual)}
           icon={<Wallet className="h-5 w-5" />}
           variant="destructive"
+          currency
+          href={`/relatorios${sufixo}`}
         />
       </div>
 

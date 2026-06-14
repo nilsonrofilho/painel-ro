@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/app-shell";
+import { ValoresProvider } from "@/components/valores-provider";
 
 export default async function AppLayout({
   children,
@@ -14,5 +15,9 @@ export default async function AppLayout({
 
   if (!user) redirect("/login");
 
-  return <AppShell user={{ email: user.email }}>{children}</AppShell>;
+  return (
+    <ValoresProvider>
+      <AppShell user={{ email: user.email }}>{children}</AppShell>
+    </ValoresProvider>
+  );
 }

@@ -52,7 +52,7 @@ export default function LoginPage() {
         if (error) throw error;
         toast.success("Conta criada. Verifique seu e-mail se necessário.");
       }
-      router.push("/");
+      router.push("/portal");
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao autenticar";

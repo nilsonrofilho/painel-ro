@@ -18,11 +18,14 @@ import {
   BarChart3,
   Landmark,
   SlidersHorizontal,
+  LayoutGrid,
+  Wallet,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ToggleValores } from "@/components/valores-provider";
 
 interface NavItem {
   href: string;
@@ -31,10 +34,12 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { href: "/portal", label: "Portal", icon: LayoutGrid },
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/loteamentos", label: "Loteamentos", icon: Building2 },
   { href: "/viabilidade", label: "Viabilidade", icon: Landmark },
   { href: "/gantt", label: "Gantt de Obras", icon: GanttChartSquare },
+  { href: "/financeiro", label: "Financeiro", icon: Wallet },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/funcionarios", label: "Funcionários", icon: HardHat },
   { href: "/fornecedores", label: "Fornecedores", icon: Truck },
@@ -74,6 +79,7 @@ export function AppShell({
           <span className="font-bold text-foreground">Painel RO</span>
         </Link>
         <div className="flex items-center gap-1">
+          <ToggleValores className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" />
           <ThemeToggle />
           <Button
             variant="ghost"
@@ -103,7 +109,10 @@ export function AppShell({
               </p>
             </div>
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <ToggleValores className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" />
+            <ThemeToggle />
+          </div>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-[4.5rem] lg:pt-3 scrollbar-thin">
           {NAV.map((item) => {
