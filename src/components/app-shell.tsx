@@ -20,6 +20,8 @@ import {
   SlidersHorizontal,
   LayoutGrid,
   Wallet,
+  Users,
+  PieChart,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -33,19 +35,55 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const NAV: NavItem[] = [
-  { href: "/portal", label: "Portal", icon: LayoutGrid },
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/loteamentos", label: "Loteamentos", icon: Building2 },
-  { href: "/viabilidade", label: "Viabilidade", icon: Landmark },
-  { href: "/gantt", label: "Gantt de Obras", icon: GanttChartSquare },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
-  { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
-  { href: "/funcionarios", label: "Funcionários", icon: HardHat },
-  { href: "/fornecedores", label: "Fornecedores", icon: Truck },
-  { href: "/materiais", label: "Materiais", icon: Package },
-  { href: "/corretores", label: "Corretores", icon: UserCog },
-  { href: "/parametros", label: "Parâmetros", icon: SlidersHorizontal },
+interface NavSection {
+  titulo?: string;
+  itens: NavItem[];
+}
+
+const NAV: NavSection[] = [
+  {
+    itens: [{ href: "/portal", label: "Painel", icon: LayoutGrid }],
+  },
+  {
+    titulo: "Gestão de Obras",
+    itens: [
+      { href: "/", label: "Dashboard", icon: Home },
+      { href: "/loteamentos", label: "Loteamentos", icon: Building2 },
+      { href: "/gantt", label: "Gantt de Obras", icon: GanttChartSquare },
+    ],
+  },
+  {
+    titulo: "Inteligência e Viabilidade",
+    itens: [
+      { href: "/viabilidade", label: "Viabilidade", icon: Landmark },
+      { href: "/parametros", label: "Parâmetros", icon: SlidersHorizontal },
+    ],
+  },
+  {
+    titulo: "Gestão Administrativa",
+    itens: [
+      { href: "/financeiro", label: "Financeiro", icon: Wallet },
+      { href: "/funcionarios", label: "Funcionários", icon: HardHat },
+      { href: "/fornecedores", label: "Fornecedores", icon: Truck },
+      { href: "/materiais", label: "Materiais", icon: Package },
+      { href: "/corretores", label: "Corretores", icon: UserCog },
+    ],
+  },
+  {
+    titulo: "Relatórios e Resultados",
+    itens: [{ href: "/relatorios", label: "Relatórios", icon: BarChart3 }],
+  },
+  {
+    titulo: "Investidor",
+    itens: [
+      { href: "/investidores", label: "Investidores", icon: Users },
+      {
+        href: "/dashboard-investidor",
+        label: "Dashboard Investidor",
+        icon: PieChart,
+      },
+    ],
+  },
 ];
 
 export function AppShell({
@@ -114,29 +152,38 @@ export function AppShell({
             <ThemeToggle />
           </div>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-[4.5rem] lg:pt-3 scrollbar-thin">
-          {NAV.map((item) => {
-            const active =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-4 overflow-y-auto p-3 pt-[4.5rem] lg:pt-3 scrollbar-thin">
+          {NAV.map((secao, si) => (
+            <div key={secao.titulo ?? `sec-${si}`} className="space-y-1">
+              {secao.titulo && (
+                <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  {secao.titulo}
+                </p>
+              )}
+              {secao.itens.map((item) => {
+                const active =
+                  item.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.href);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="border-t p-3">
           {user?.email && (

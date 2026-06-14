@@ -330,6 +330,30 @@ export interface ViabilidadeFluxoRow {
   created_at: string;
 }
 
+export interface InvestidorRow {
+  id: string;
+  nome: string;
+  cpf_cnpj: string | null;
+  telefone: string | null;
+  email: string | null;
+  observacao: string | null;
+  token_publico: string;
+  ativo: boolean;
+  created_at: string;
+}
+
+export interface AporteRow {
+  id: string;
+  investidor_id: string;
+  lote_id: string;
+  valor_investido: number;
+  retorno_pct: number | null;
+  retorno_valor: number | null;
+  data_aporte: string | null;
+  observacao: string | null;
+  created_at: string;
+}
+
 export interface LancamentoFinanceiroRow {
   id: string;
   tipo: "pagar" | "receber";
@@ -531,6 +555,21 @@ export interface Database {
         Update: GenericUpdate<LancamentoFinanceiroRow>;
         Relationships: [];
       };
+      investidores: {
+        Row: InvestidorRow;
+        Insert: GenericInsert<InvestidorRow> & { nome: string };
+        Update: GenericUpdate<InvestidorRow>;
+        Relationships: [];
+      };
+      aportes: {
+        Row: AporteRow;
+        Insert: GenericInsert<AporteRow> & {
+          investidor_id: string;
+          lote_id: string;
+        };
+        Update: GenericUpdate<AporteRow>;
+        Relationships: [];
+      };
       municipios_parametros: {
         Row: MunicipioParametrosRow;
         Insert: GenericInsert<MunicipioParametrosRow> & {
@@ -622,6 +661,8 @@ export type Documento = DocumentoRow;
 export type Material = MaterialRow;
 export type DiarioObra = DiarioObraRow;
 export type LancamentoFinanceiro = LancamentoFinanceiroRow;
+export type Investidor = InvestidorRow;
+export type Aporte = AporteRow;
 export type MunicipioParametros = MunicipioParametrosRow;
 export type CubIndice = CubIndiceRow;
 export type ZonaUrbanistica = ZonaUrbanisticaRow;

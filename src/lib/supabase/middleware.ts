@@ -36,14 +36,16 @@ export async function updateSession(request: NextRequest) {
     url.pathname.startsWith("/_next") ||
     url.pathname.startsWith("/favicon") ||
     url.pathname.startsWith("/api/public");
+  // Link público de acompanhamento do investidor (sem login, read-only)
+  const isPublicaInvestidor = url.pathname.startsWith("/acompanhamento");
 
-  if (!user && !isAuthRoute && !isPublicAsset) {
+  if (!user && !isAuthRoute && !isPublicAsset && !isPublicaInvestidor) {
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   if (user && isAuthRoute) {
-    url.pathname = "/";
+    url.pathname = "/portal";
     return NextResponse.redirect(url);
   }
 

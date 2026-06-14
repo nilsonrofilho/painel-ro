@@ -471,6 +471,185 @@ export async function getFasesTodosLotes(
 }
 
 // ============================================================
+// Investidores
+// ============================================================
+import type { Investidor } from "@/lib/supabase/types";
+
+export interface AporteComLote {
+  id: string;
+  valor_investido: number;
+  retorno_pct: number | null;
+  retorno_valor: number | null;
+  data_aporte: string | null;
+  observacao: string | null;
+  lote_id: string;
+  lote_numero: string;
+  quadra_identificador: string;
+  loteamento_id: string;
+  loteamento_nome: string;
+  lote_status: string;
+  lote_etapa: string | null;
+}
+
+export interface InvestidorResumo extends Investidor {
+  total_investido: number;
+  retorno_projetado: number;
+  qtd_lotes: number;
+}
+
+function retornoDoAporte(a: {
+  valor_investido: number;
+  retorno_pct: number | null;
+  retorno_valor: number | null;
+}): number {
+  if (a.retorno_valor != null) return Number(a.retorno_valor);
+  if (a.retorno_pct != null)
+    return (Number(a.valor_investido) * Number(a.retorno_pct)) / 100;
+  return 0;
+}
+
+export async function getInvestidores(): Promise<InvestidorResumo[]> {
+  const supabase = await createClient();
+  const { data: investidores } = await supabase
+    .from("investidores")
+    .select("*")
+    .order("nome");
+  if (!investidores) return [];
+
+  const { data: aportes } = await supabase
+    .from("aportes")
+    .select("investidor_id, valor_investido, retorno_pct, retorno_valor");
+
+  return investidores.map((inv) => {
+    const meus = (aportes ?? []).filter((a) => a.investidor_id === inv.id);
+    return {
+      ...(inv as Investidor),
+      total_investido: meus.reduce(
+        (s, a) => s + Number(a.valor_investido ?? 0),
+        0,
+      ),
+      retorno_projetado: meus.reduce((s, a) => s + retornoDoAporte(a), 0),
+      qtd_lotes: meus.length,
+    };
+  });
+}
+
+export async function getInvestidor(id: string): Promise<Investidor | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("investidores")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data as Investidor | null;
+}
+
+export async function getInvestidorPorToken(
+  token: string,
+): Promise<Investidor | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("investidores")
+    .select("*")
+    .eq("token_publico", token)
+    .maybeSingle();
+  return data as Investidor | null;
+}
+
+export async function getAportesDoInvestidor(
+  investidorId: string,
+): Promise<AporteComLote[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("aportes")
+    .select(
+      "*, lote:lotes(numero, status, etapa, quadra:quadras(identificador, loteamento:loteamentos(id, nome)))",
+    )
+    .eq("investidor_id", investidorId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? [])
+    .map((a) => {
+      const lote = a.lote as unknown as {
+        numero: string;
+        status: string;
+        etapa: string | null;
+        quadra?: {
+          identificador: string;
+          loteamento?: { id: string; nome: string };
+        };
+      } | null;
+      if (!lote?.quadra?.loteamento) return null;
+      return {
+        id: a.id,
+        valor_investido: Number(a.valor_investido ?? 0),
+        retorno_pct: a.retorno_pct,
+        retorno_valor: a.retorno_valor,
+        data_aporte: a.data_aporte,
+        observacao: a.observacao,
+        lote_id: a.lote_id,
+        lote_numero: lote.numero,
+        quadra_identificador: lote.quadra.identificador,
+        loteamento_id: lote.quadra.loteamento.id,
+        loteamento_nome: lote.quadra.loteamento.nome,
+        lote_status: lote.status,
+        lote_etapa: lote.etapa,
+      } as AporteComLote;
+    })
+    .filter((x): x is AporteComLote => x !== null);
+}
+
+export interface DashboardInvestidor {
+  totalCaptado: number;
+  retornoProjetado: number;
+  qtdInvestidores: number;
+  qtdAportes: number;
+  porLoteamento: { nome: string; valor: number }[];
+  porInvestidor: { nome: string; valor: number; retorno: number }[];
+}
+
+export async function getDashboardInvestidor(): Promise<DashboardInvestidor> {
+  const investidores = await getInvestidores();
+  const supabase = await createClient();
+  const { data: aportes } = await supabase
+    .from("aportes")
+    .select(
+      "valor_investido, retorno_pct, retorno_valor, lote:lotes(quadra:quadras(loteamento:loteamentos(nome)))",
+    );
+
+  const porLot = new Map<string, number>();
+  let qtdAportes = 0;
+  for (const a of aportes ?? []) {
+    qtdAportes += 1;
+    const lote = a.lote as unknown as {
+      quadra?: { loteamento?: { nome: string } };
+    } | null;
+    const nome = lote?.quadra?.loteamento?.nome ?? "Sem loteamento";
+    porLot.set(nome, (porLot.get(nome) ?? 0) + Number(a.valor_investido ?? 0));
+  }
+
+  return {
+    totalCaptado: investidores.reduce((s, i) => s + i.total_investido, 0),
+    retornoProjetado: investidores.reduce(
+      (s, i) => s + i.retorno_projetado,
+      0,
+    ),
+    qtdInvestidores: investidores.length,
+    qtdAportes,
+    porLoteamento: Array.from(porLot.entries())
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor),
+    porInvestidor: investidores
+      .map((i) => ({
+        nome: i.nome,
+        valor: i.total_investido,
+        retorno: i.retorno_projetado,
+      }))
+      .sort((a, b) => b.valor - a.valor),
+  };
+}
+
+// ============================================================
 // Financeiro
 // ============================================================
 import type { LancamentoFinanceiro } from "@/lib/supabase/types";
