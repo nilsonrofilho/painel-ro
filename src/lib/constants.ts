@@ -135,3 +135,54 @@ export const CLIMA_DIARIO = {
   garoa: "🌦️ Garoa",
   chuvoso: "🌧️ Chuvoso",
 } as const;
+
+// ============================================================
+// Financeiro
+// ============================================================
+export const TIPO_LANCAMENTO = {
+  pagar: "A pagar",
+  receber: "A receber",
+} as const;
+
+export const STATUS_LANCAMENTO = {
+  pendente: { label: "Pendente", color: "warning" },
+  pago: { label: "Pago", color: "success" },
+  cancelado: { label: "Cancelado", color: "muted" },
+} as const;
+
+export const CATEGORIA_FINANCEIRA = {
+  obra: "Obra",
+  terreno: "Terreno",
+  administrativo: "Administrativo",
+  marketing: "Marketing",
+  comissao: "Comissão",
+  imposto: "Imposto",
+  financeiro: "Financeiro",
+  venda: "Venda",
+  outro: "Outro",
+} as const;
+
+export type CategoriaFinanceira = keyof typeof CATEGORIA_FINANCEIRA;
+
+export const FORMA_PAGAMENTO = {
+  pix: "PIX",
+  boleto: "Boleto",
+  transferencia: "Transferência",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+} as const;
+
+export const RECORRENCIA = {
+  none: "Sem recorrência",
+  mensal: "Mensal",
+  semanal: "Semanal",
+  anual: "Anual",
+} as const;
+
+export const GRANULARIDADE_FLUXO = {
+  dia: "Diária",
+  semana: "Semanal",
+  mes: "Mensal",
+} as const;
+
+export type GranularidadeFluxo = keyof typeof GRANULARIDADE_FLUXO;

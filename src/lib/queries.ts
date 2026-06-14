@@ -471,6 +471,190 @@ export async function getFasesTodosLotes(
 }
 
 // ============================================================
+// Financeiro
+// ============================================================
+import type { LancamentoFinanceiro } from "@/lib/supabase/types";
+import type { LinhaDRE } from "@/lib/financeiro";
+
+export async function getLancamentosFinanceiros(
+  filtro?: FiltroLote,
+): Promise<LancamentoFinanceiro[]> {
+  const supabase = await createClient();
+  const loteIds = filtro ? await resolverLoteIds(filtro) : null;
+  let query = supabase
+    .from("lancamentos_financeiros")
+    .select("*")
+    .order("data_vencimento", { ascending: true });
+  if (filtro?.loteamentoId) query = query.eq("loteamento_id", filtro.loteamentoId);
+  if (loteIds !== null && filtro?.loteId) {
+    query = query.eq("lote_id", filtro.loteId);
+  }
+  const { data } = await query;
+  return (data ?? []) as LancamentoFinanceiro[];
+}
+
+export interface ResumoFinanceiro {
+  totalReceber: number;
+  totalPagar: number;
+  recebidoMes: number;
+  pagoMes: number;
+  atrasadoReceber: number;
+  atrasadoPagar: number;
+  saldoPrevisto: number;
+}
+
+export async function getResumoFinanceiro(
+  filtro?: FiltroLote,
+): Promise<ResumoFinanceiro> {
+  const lancamentos = await getLancamentosFinanceiros(filtro);
+  const hoje = new Date().toISOString().slice(0, 10);
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  const inicioMesStr = inicioMes.toISOString().slice(0, 10);
+
+  const r: ResumoFinanceiro = {
+    totalReceber: 0,
+    totalPagar: 0,
+    recebidoMes: 0,
+    pagoMes: 0,
+    atrasadoReceber: 0,
+    atrasadoPagar: 0,
+    saldoPrevisto: 0,
+  };
+
+  for (const l of lancamentos) {
+    if (l.status === "cancelado") continue;
+    const valor = Number(l.valor ?? 0);
+    const pago = Number(l.valor_pago ?? l.valor ?? 0);
+    if (l.status === "pendente") {
+      if (l.tipo === "receber") r.totalReceber += valor;
+      else r.totalPagar += valor;
+      if (l.data_vencimento < hoje) {
+        if (l.tipo === "receber") r.atrasadoReceber += valor;
+        else r.atrasadoPagar += valor;
+      }
+    } else if (l.status === "pago" && l.data_pagamento) {
+      if (l.data_pagamento >= inicioMesStr) {
+        if (l.tipo === "receber") r.recebidoMes += pago;
+        else r.pagoMes += pago;
+      }
+    }
+  }
+  r.saldoPrevisto = r.totalReceber - r.totalPagar;
+  return r;
+}
+
+/**
+ * Monta as linhas da DRE a partir de várias fontes (regime de caixa):
+ * - Receitas: vendas ativas + lançamentos 'receber' pagos
+ * - Custos diretos: materiais (saída) + alocações + lançamentos obra/terreno
+ * - Despesas: comissões de venda + lançamentos admin/marketing/imposto/etc.
+ */
+export async function getDRELinhas(filtro?: FiltroLote): Promise<LinhaDRE[]> {
+  const supabase = await createClient();
+  const loteIds = filtro ? await resolverLoteIds(filtro) : null;
+  const linhas: LinhaDRE[] = [];
+
+  // Vendas (receita) — usa valor da venda ativa
+  let vendasQ = supabase
+    .from("vendas")
+    .select("valor, comissao_valor, status, tipo, lote_id")
+    .eq("tipo", "venda")
+    .eq("status", "ativa");
+  if (loteIds !== null) {
+    if (loteIds.length === 0) vendasQ = vendasQ.eq("lote_id", ID_NENHUM);
+    else vendasQ = vendasQ.in("lote_id", loteIds);
+  }
+  const { data: vendas } = await vendasQ;
+  for (const v of vendas ?? []) {
+    if (v.valor) {
+      linhas.push({
+        natureza: "receita",
+        categoria: "venda",
+        loteamento_id: null,
+        lote_id: v.lote_id,
+        valor: Number(v.valor),
+      });
+    }
+    if (v.comissao_valor) {
+      linhas.push({
+        natureza: "despesa_operacional",
+        categoria: "comissao",
+        loteamento_id: null,
+        lote_id: v.lote_id,
+        valor: Number(v.comissao_valor),
+      });
+    }
+  }
+
+  // Materiais (custo direto, saída)
+  let matQ = supabase
+    .from("lancamentos_material")
+    .select("valor_total, tipo, lote_id")
+    .eq("tipo", "saida");
+  if (loteIds !== null) {
+    if (loteIds.length === 0) matQ = matQ.eq("lote_id", ID_NENHUM);
+    else matQ = matQ.in("lote_id", loteIds);
+  }
+  const { data: mats } = await matQ;
+  for (const m of mats ?? []) {
+    linhas.push({
+      natureza: "custo_direto",
+      categoria: "obra",
+      loteamento_id: null,
+      lote_id: m.lote_id,
+      valor: Number(m.valor_total ?? 0),
+    });
+  }
+
+  // Alocações (mão de obra)
+  let alocQ = supabase.from("alocacoes").select("valor_pago, lote_id");
+  if (loteIds !== null) {
+    if (loteIds.length === 0) alocQ = alocQ.eq("lote_id", ID_NENHUM);
+    else alocQ = alocQ.in("lote_id", loteIds);
+  }
+  const { data: alocs } = await alocQ;
+  for (const a of alocs ?? []) {
+    if (a.valor_pago) {
+      linhas.push({
+        natureza: "custo_direto",
+        categoria: "obra",
+        loteamento_id: null,
+        lote_id: a.lote_id,
+        valor: Number(a.valor_pago),
+      });
+    }
+  }
+
+  // Lançamentos financeiros avulsos
+  const lancs = await getLancamentosFinanceiros(filtro);
+  for (const l of lancs) {
+    if (l.status === "cancelado") continue;
+    const valor = Number(l.valor_pago ?? l.valor ?? 0);
+    if (l.tipo === "receber") {
+      linhas.push({
+        natureza: "receita",
+        categoria: l.categoria,
+        loteamento_id: l.loteamento_id,
+        lote_id: l.lote_id,
+        valor,
+      });
+    } else {
+      const direto = l.categoria === "obra" || l.categoria === "terreno";
+      linhas.push({
+        natureza: direto ? "custo_direto" : "despesa_operacional",
+        categoria: l.categoria,
+        loteamento_id: l.loteamento_id,
+        lote_id: l.lote_id,
+        valor,
+      });
+    }
+  }
+
+  return linhas;
+}
+
+// ============================================================
 // Viabilidade
 // ============================================================
 import type {

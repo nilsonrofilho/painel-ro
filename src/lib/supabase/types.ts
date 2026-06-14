@@ -330,6 +330,50 @@ export interface ViabilidadeFluxoRow {
   created_at: string;
 }
 
+export interface LancamentoFinanceiroRow {
+  id: string;
+  tipo: "pagar" | "receber";
+  descricao: string;
+  valor: number;
+  valor_pago: number | null;
+  data_competencia: string | null;
+  data_vencimento: string;
+  data_pagamento: string | null;
+  status: "pendente" | "pago" | "cancelado";
+  categoria:
+    | "obra"
+    | "terreno"
+    | "administrativo"
+    | "marketing"
+    | "comissao"
+    | "imposto"
+    | "financeiro"
+    | "venda"
+    | "outro";
+  loteamento_id: string | null;
+  lote_id: string | null;
+  fase_id: string | null;
+  fornecedor_id: string | null;
+  venda_id: string | null;
+  corretor_id: string | null;
+  forma_pagamento:
+    | "pix"
+    | "boleto"
+    | "transferencia"
+    | "dinheiro"
+    | "cartao"
+    | null;
+  nota_fiscal_numero: string | null;
+  comprovante_url: string | null;
+  observacao: string | null;
+  parcela_numero: number | null;
+  total_parcelas: number | null;
+  grupo_id: string | null;
+  recorrencia: "none" | "mensal" | "semanal" | "anual";
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DiarioObraRow {
   id: string;
   lote_id: string;
@@ -476,6 +520,17 @@ export interface Database {
         Update: GenericUpdate<DiarioObraRow>;
         Relationships: [];
       };
+      lancamentos_financeiros: {
+        Row: LancamentoFinanceiroRow;
+        Insert: GenericInsert<LancamentoFinanceiroRow> & {
+          tipo: "pagar" | "receber";
+          descricao: string;
+          valor: number;
+          data_vencimento: string;
+        };
+        Update: GenericUpdate<LancamentoFinanceiroRow>;
+        Relationships: [];
+      };
       municipios_parametros: {
         Row: MunicipioParametrosRow;
         Insert: GenericInsert<MunicipioParametrosRow> & {
@@ -566,6 +621,7 @@ export type Corretor = CorretorRow;
 export type Documento = DocumentoRow;
 export type Material = MaterialRow;
 export type DiarioObra = DiarioObraRow;
+export type LancamentoFinanceiro = LancamentoFinanceiroRow;
 export type MunicipioParametros = MunicipioParametrosRow;
 export type CubIndice = CubIndiceRow;
 export type ZonaUrbanistica = ZonaUrbanisticaRow;
