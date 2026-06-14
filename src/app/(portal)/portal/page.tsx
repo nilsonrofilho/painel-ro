@@ -4,6 +4,7 @@ import {
   Landmark,
   Wallet,
   Home as HomeIcon,
+  Users,
   ArrowRight,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -61,6 +62,16 @@ const CAMADAS: Camada[] = [
     href: "/relatorios",
     tags: ["Dashboard", "Relatórios", "DRE"],
     accent: "from-primary/15 to-accent/10",
+  },
+  {
+    titulo: "Investidores",
+    subtitulo: "Captação & retorno",
+    descricao:
+      "Painel dos investidores: aportes por lote, retorno projetado e link de acompanhamento.",
+    icon: Users,
+    href: "/dashboard-investidor",
+    tags: ["Aportes", "Retorno", "Acompanhamento"],
+    accent: "from-accent/15 to-primary/10",
   },
 ];
 
