@@ -43,6 +43,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { KPICard } from "@/components/kpi-card";
+import { ResumoEtapasChart } from "@/components/charts/resumo-etapas-chart";
 import { addFase, updateFase, deleteFase, seedFasesPadrao } from "@/lib/actions/fases";
 import { formatBRL, formatDateBR, formatPercent } from "@/lib/utils";
 import type { FaseObra, Lote } from "@/lib/supabase/types";
@@ -195,6 +196,24 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
           }
         />
       </div>
+
+      {/* Resumo por etapa (donut + tabela) */}
+      {fases.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Resumo por Etapa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResumoEtapasChart
+              etapas={fases.map((f) => ({
+                nome: f.nome,
+                orcamento: Number(f.orcamento ?? 0),
+                gasto: Number(f.gasto ?? 0),
+              }))}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Fases */}
       <Card>

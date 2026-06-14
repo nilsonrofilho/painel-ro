@@ -24,18 +24,28 @@ export interface GanttGroup {
   tasks: GanttTask[];
 }
 
-export async function getGanttData(): Promise<{
+export async function getGanttData(filtro?: {
+  loteamentoId?: string;
+  loteId?: string;
+}): Promise<{
   groups: GanttGroup[];
   minDate: Date;
   maxDate: Date;
 }> {
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("lotes")
     .select(
-      "id, numero, status, etapa, data_inicio_obra, previsao_entrega, data_entrega_real, quadra:quadras(identificador, loteamento:loteamentos(id, nome, data_inicio, previsao_entrega))",
+      "id, numero, status, etapa, data_inicio_obra, previsao_entrega, data_entrega_real, quadra:quadras(identificador, loteamento_id, loteamento:loteamentos(id, nome, data_inicio, previsao_entrega))",
     )
     .order("created_at", { ascending: true });
+
+  // Filtro por lote tem precedência sobre loteamento
+  if (filtro?.loteId) {
+    query = query.eq("id", filtro.loteId);
+  }
+
+  const { data } = await query;
 
   const today = new Date();
   const tasks: GanttTask[] = [];
@@ -43,6 +53,7 @@ export async function getGanttData(): Promise<{
   for (const l of data ?? []) {
     const quadra = l.quadra as unknown as {
       identificador: string;
+      loteamento_id: string;
       loteamento?: {
         id: string;
         nome: string;
@@ -51,6 +62,14 @@ export async function getGanttData(): Promise<{
       };
     } | null;
     if (!quadra?.loteamento) continue;
+
+    // Filtro por loteamento (em memória, pois é via join)
+    if (
+      filtro?.loteamentoId &&
+      quadra.loteamento_id !== filtro.loteamentoId
+    ) {
+      continue;
+    }
 
     // Prefere a data de início específica do lote; cai pra do loteamento
     const start = l.data_inicio_obra

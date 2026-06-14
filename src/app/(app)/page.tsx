@@ -27,11 +27,23 @@ import {
   getObrasAtrasadas,
   getVendasPorMes,
 } from "@/lib/queries-extra";
+import {
+  getOpcoesFiltro,
+  parseFiltro,
+  type OpcaoLoteamento,
+  type OpcaoLote,
+} from "@/lib/filters";
+import { FiltroLoteamentoLote } from "@/components/filtro-loteamento-lote";
 import { formatBRL, formatDateBR, formatPercent } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+interface Props {
+  searchParams: Promise<{ loteamento?: string; lote?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: Props) {
+  const filtro = parseFiltro(await searchParams);
   const [
     stats,
     statusDist,
@@ -40,21 +52,41 @@ export default async function DashboardPage() {
     obrasAtrasadas,
     gastoMesAtual,
     ultimasVendas,
+    opcoes,
   ] = await Promise.all([
-    getDashboardStats(),
-    getDistribuicaoStatusLotes(),
-    getVendasPorMes(12),
-    getGastosPorLoteamento(),
-    getObrasAtrasadas(),
-    getGastosMesAtual(),
-    getVendasUltimas(5),
+    getDashboardStats(filtro),
+    getDistribuicaoStatusLotes(filtro),
+    getVendasPorMes(12, filtro),
+    getGastosPorLoteamento(filtro),
+    getObrasAtrasadas(filtro),
+    getGastosMesAtual(filtro),
+    getVendasUltimas(5, filtro),
+    getOpcoesFiltro(),
   ]);
+
+  const filtroAtivo = !!filtro.loteamentoId || !!filtro.loteId;
+  const loteamentoNome = filtro.loteamentoId
+    ? (opcoes.loteamentos as OpcaoLoteamento[]).find(
+        (l) => l.id === filtro.loteamentoId,
+      )?.nome
+    : undefined;
+  const loteNumero = filtro.loteId
+    ? (opcoes.lotes as OpcaoLote[]).find((l) => l.id === filtro.loteId)?.numero
+    : undefined;
+  const descricaoFiltro = filtroAtivo
+    ? [
+        loteamentoNome ? `Loteamento: ${loteamentoNome}` : null,
+        loteNumero ? `Lote ${loteNumero}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "Visão geral da operação da RO Construções";
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        description="Visão geral da operação da RO Construções"
+        description={descricaoFiltro}
         actions={
           <Button asChild>
             <Link href="/gantt">
@@ -64,6 +96,13 @@ export default async function DashboardPage() {
           </Button>
         }
       />
+
+      <div className="mb-6">
+        <FiltroLoteamentoLote
+          loteamentos={opcoes.loteamentos}
+          lotes={opcoes.lotes}
+        />
+      </div>
 
       {/* KPIs principais */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

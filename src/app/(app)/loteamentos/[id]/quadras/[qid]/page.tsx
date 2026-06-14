@@ -8,7 +8,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { BackButton } from "@/components/back-button";
 import { PageHeader } from "@/components/page-header";
 import { KPICard } from "@/components/kpi-card";
-import { LoteCard } from "@/components/lote-card";
+import { LotesFilter } from "@/components/lotes-filter";
 import { getLoteamento, getQuadra, getLotesDaQuadra } from "@/lib/queries";
 import { DeleteQuadraButton } from "./delete-button";
 import { DuplicarQuadraButton } from "./duplicar-button";
@@ -123,11 +123,7 @@ export default async function QuadraDetalhePage({ params }: Props) {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {lotes.map((l) => (
-            <LoteCard key={l.id} lote={l} />
-          ))}
-        </div>
+        <LotesFilter lotes={lotes} />
       )}
     </>
   );

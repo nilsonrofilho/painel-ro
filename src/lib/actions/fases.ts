@@ -33,6 +33,7 @@ export async function addFase(input: FaseInput) {
   if (error) throw new Error(error.message);
   revalidatePath(`/lotes/${parsed.lote_id}`);
   revalidatePath("/gantt");
+  revalidatePath("/relatorios");
 }
 
 export async function updateFase(id: string, input: Partial<FaseInput>) {
@@ -46,6 +47,7 @@ export async function updateFase(id: string, input: Partial<FaseInput>) {
   if (error) throw new Error(error.message);
   if (data) revalidatePath(`/lotes/${data.lote_id}`);
   revalidatePath("/gantt");
+  revalidatePath("/relatorios");
 }
 
 export async function deleteFase(id: string, loteId: string) {
@@ -54,6 +56,7 @@ export async function deleteFase(id: string, loteId: string) {
   if (error) throw new Error(error.message);
   revalidatePath(`/lotes/${loteId}`);
   revalidatePath("/gantt");
+  revalidatePath("/relatorios");
 }
 
 export async function seedFasesPadrao(loteId: string) {
@@ -75,4 +78,6 @@ export async function seedFasesPadrao(loteId: string) {
     })),
   );
   revalidatePath(`/lotes/${loteId}`);
+  revalidatePath("/gantt");
+  revalidatePath("/relatorios");
 }

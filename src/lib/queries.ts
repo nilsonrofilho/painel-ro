@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolverLoteIds, type FiltroLote } from "@/lib/filters";
 import type {
   Loteamento,
   Quadra,
@@ -12,6 +13,8 @@ import type {
   Alocacao,
   Documento,
 } from "@/lib/supabase/types";
+
+const ID_NENHUM = "00000000-0000-0000-0000-000000000000";
 
 export async function getLoteamentos(): Promise<
   (Loteamento & {
@@ -288,14 +291,33 @@ export async function getDocumentosDoLote(
   return data ?? [];
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(filtro?: FiltroLote) {
   const supabase = await createClient();
-  const [{ count: totalLoteamentos }, { data: lotes }, { data: vendas }] =
+  const loteIds = filtro ? await resolverLoteIds(filtro) : null;
+
+  let lotesQuery = supabase.from("lotes").select("status, valor_venda, id");
+  let vendasQuery = supabase.from("vendas").select("*");
+  if (loteIds !== null) {
+    if (loteIds.length === 0) {
+      lotesQuery = lotesQuery.eq("id", ID_NENHUM);
+      vendasQuery = vendasQuery.eq("lote_id", ID_NENHUM);
+    } else {
+      lotesQuery = lotesQuery.in("id", loteIds);
+      vendasQuery = vendasQuery.in("lote_id", loteIds);
+    }
+  }
+
+  const [{ count: totalLoteamentosGeral }, { data: lotes }, { data: vendas }] =
     await Promise.all([
       supabase.from("loteamentos").select("*", { count: "exact", head: true }),
-      supabase.from("lotes").select("status, valor_venda"),
-      supabase.from("vendas").select("*"),
+      lotesQuery,
+      vendasQuery,
     ]);
+
+  // Quando filtrado por loteamento/lote, "Loteamentos" mostra 1; senão o total
+  const totalLoteamentos = filtro?.loteamentoId || filtro?.loteId
+    ? 1
+    : totalLoteamentosGeral ?? 0;
 
   const stats = (lotes ?? []).reduce(
     (acc, l) => {
@@ -329,7 +351,7 @@ export async function getDashboardStats() {
   const valorMes = vendasMes.reduce((s, v) => s + Number(v.valor ?? 0), 0);
 
   return {
-    totalLoteamentos: totalLoteamentos ?? 0,
+    totalLoteamentos,
     ...stats,
     pctVendas: stats.total > 0 ? (stats.vendidos / stats.total) * 100 : 0,
     valorMes,
@@ -344,13 +366,23 @@ export type VendaUltima = Venda & {
   } | null;
 };
 
-export async function getVendasUltimas(limit = 5): Promise<VendaUltima[]> {
+export async function getVendasUltimas(
+  limit = 5,
+  filtro?: FiltroLote,
+): Promise<VendaUltima[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const loteIds = filtro ? await resolverLoteIds(filtro) : null;
+
+  let query = supabase
     .from("vendas")
     .select("*, lote:lotes(numero, quadra:quadras(identificador, loteamento:loteamentos(nome)))")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (loteIds !== null) {
+    if (loteIds.length === 0) return [];
+    query = query.in("lote_id", loteIds);
+  }
+  const { data } = await query;
   return (data ?? []) as unknown as VendaUltima[];
 }
 
@@ -373,6 +405,49 @@ export async function getGastosTotaisLote(loteId: string): Promise<number> {
     0,
   );
   return matTotal + aloTotal;
+}
+
+export interface EtapaAgregada {
+  nome: string;
+  orcamento: number;
+  gasto: number;
+}
+
+/**
+ * Agrega fases de obra de TODOS os lotes por nome de fase (case-insensitive),
+ * somando orçamento e gasto. Usado na página de Relatórios.
+ * Aceita filtro opcional por loteamento/lote.
+ */
+export async function getFasesTodosLotes(
+  filtro?: FiltroLote,
+): Promise<EtapaAgregada[]> {
+  const supabase = await createClient();
+  const loteIds = filtro ? await resolverLoteIds(filtro) : null;
+
+  let query = supabase.from("fases_obra").select("nome, orcamento, gasto, lote_id");
+  if (loteIds !== null) {
+    if (loteIds.length === 0) return [];
+    query = query.in("lote_id", loteIds);
+  }
+  const { data } = await query;
+
+  const mapa = new Map<string, EtapaAgregada>();
+  for (const f of data ?? []) {
+    const chave = (f.nome ?? "").trim().toLowerCase();
+    if (!chave) continue;
+    const existente = mapa.get(chave);
+    if (existente) {
+      existente.orcamento += Number(f.orcamento ?? 0);
+      existente.gasto += Number(f.gasto ?? 0);
+    } else {
+      mapa.set(chave, {
+        nome: (f.nome ?? "").trim(),
+        orcamento: Number(f.orcamento ?? 0),
+        gasto: Number(f.gasto ?? 0),
+      });
+    }
+  }
+  return Array.from(mapa.values()).sort((a, b) => b.orcamento - a.orcamento);
 }
 
 export async function getLotesParaGantt() {

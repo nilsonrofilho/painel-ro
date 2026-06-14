@@ -15,6 +15,7 @@ import {
   X,
   HardHat,
   Package,
+  BarChart3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/loteamentos", label: "Loteamentos", icon: Building2 },
   { href: "/gantt", label: "Gantt de Obras", icon: GanttChartSquare },
+  { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/funcionarios", label: "Funcionários", icon: HardHat },
   { href: "/fornecedores", label: "Fornecedores", icon: Truck },
   { href: "/materiais", label: "Materiais", icon: Package },

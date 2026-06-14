@@ -53,6 +53,8 @@ export async function addLancamentoMaterial(input: LancamentoInput) {
   }
 
   revalidatePath(`/lotes/${parsed.lote_id}`);
+  revalidatePath("/relatorios");
+  revalidatePath("/");
 }
 
 export async function updateLancamentoMaterial(
@@ -115,6 +117,8 @@ export async function updateLancamentoMaterial(
   }
 
   if (data) revalidatePath(`/lotes/${data.lote_id}`);
+  revalidatePath("/relatorios");
+  revalidatePath("/");
 }
 
 export async function deleteLancamento(id: string, loteId: string) {
@@ -148,4 +152,6 @@ export async function deleteLancamento(id: string, loteId: string) {
     }
   }
   revalidatePath(`/lotes/${loteId}`);
+  revalidatePath("/relatorios");
+  revalidatePath("/");
 }

@@ -36,6 +36,7 @@ import { formatBRL, formatDateBR } from "@/lib/utils";
 import { ETAPAS_OBRA } from "@/lib/constants";
 import { DeleteLoteButton } from "./delete-button";
 import { DuplicarLoteButton } from "./duplicar-button";
+import { ResumoFinanceiroButton } from "./resumo-financeiro-button";
 import { VisaoGeralTab } from "./tabs/visao-geral";
 import { VendaTab } from "./tabs/venda";
 import { ObraCustosTab } from "./tabs/obra-custos";
@@ -138,6 +139,14 @@ export default async function LoteDetalhePage({ params }: Props) {
                     Editar
                   </Link>
                 </Button>
+                <ResumoFinanceiroButton
+                  numero={lote.numero}
+                  etapas={fases.map((f) => ({
+                    nome: f.nome,
+                    orcamento: Number(f.orcamento ?? 0),
+                    gasto: Number(f.gasto ?? 0),
+                  }))}
+                />
                 <DuplicarLoteButton loteId={id} numero={lote.numero} />
                 <DeleteLoteButton id={id} numero={lote.numero} />
               </div>
