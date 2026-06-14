@@ -108,6 +108,10 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
         data_fim: (fd.get("data_fim") as string) || null,
         status: (fd.get("status") as "pendente" | "em_andamento" | "concluida") ?? "pendente",
         ordem: editingFase ? editingFase.ordem : fases.length + 1,
+        predecessora_id: (fd.get("predecessora_id") as string) || null,
+        duracao_dias: fd.get("duracao_dias")
+          ? Number(fd.get("duracao_dias"))
+          : null,
       };
       if (editingFase) {
         await updateFase(editingFase.id, payload);
@@ -261,11 +265,39 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                       : pct > 80
                         ? "bg-warning"
                         : "bg-success";
+                  const duracao =
+                    f.duracao_dias != null
+                      ? f.duracao_dias
+                      : f.data_inicio && f.data_fim
+                        ? Math.max(
+                            1,
+                            Math.round(
+                              (new Date(f.data_fim).getTime() -
+                                new Date(f.data_inicio).getTime()) /
+                                86400000,
+                            ),
+                          )
+                        : null;
+                  const predecessora = f.predecessora_id
+                    ? fases.find((x) => x.id === f.predecessora_id)?.nome
+                    : null;
                   return (
                     <TableRow key={f.id}>
-                      <TableCell className="font-medium">{f.nome}</TableCell>
+                      <TableCell>
+                        <p className="font-medium">{f.nome}</p>
+                        {predecessora && (
+                          <p className="text-[10px] text-muted-foreground">
+                            após: {predecessora}
+                          </p>
+                        )}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {formatDateBR(f.data_inicio)} → {formatDateBR(f.data_fim)}
+                        {duracao != null && (
+                          <span className="ml-1 font-medium text-foreground">
+                            ({duracao}d)
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">{formatBRL(orc)}</TableCell>
                       <TableCell className="text-right font-medium">
@@ -484,6 +516,36 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                   type="date"
                   defaultValue={editingFase?.data_fim ?? ""}
                 />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="duracao_dias">Duração (dias)</Label>
+                <Input
+                  id="duracao_dias"
+                  name="duracao_dias"
+                  type="number"
+                  min="0"
+                  placeholder="Auto pelas datas"
+                  defaultValue={editingFase?.duracao_dias ?? ""}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="predecessora_id">Atividade predecessora</Label>
+                <Select
+                  id="predecessora_id"
+                  name="predecessora_id"
+                  defaultValue={editingFase?.predecessora_id ?? ""}
+                >
+                  <option value="">— nenhuma —</option>
+                  {fases
+                    .filter((f) => f.id !== editingFase?.id)
+                    .map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.nome}
+                      </option>
+                    ))}
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">

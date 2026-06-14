@@ -14,6 +14,8 @@ const faseSchema = z.object({
     .enum(["pendente", "em_andamento", "concluida"])
     .default("pendente"),
   ordem: z.coerce.number().int().default(0),
+  predecessora_id: z.string().uuid().optional().nullable(),
+  duracao_dias: z.coerce.number().int().optional().nullable(),
 });
 
 export type FaseInput = z.infer<typeof faseSchema>;

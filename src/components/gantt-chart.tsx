@@ -196,6 +196,9 @@ export function GanttChart({ groups, minDate, maxDate }: GanttChartProps) {
                     <span className="text-[10px] text-muted-foreground">
                       Q.{t.quadraIdentificador}
                     </span>
+                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                      {t.duracaoDias}d
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -365,6 +368,36 @@ export function GanttChart({ groups, minDate, maxDate }: GanttChartProps) {
                   {task.etapaPercent}%
                 </Badge>
               </div>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 border-t pt-2 text-xs sm:grid-cols-3">
+              <div>
+                <span className="text-muted-foreground">Duração: </span>
+                <span className="font-medium">{task.duracaoDias} dias</span>
+              </div>
+              {task.previsaoPaceFim && (
+                <div>
+                  <span className="text-muted-foreground">Previsão (ritmo): </span>
+                  <span className="font-medium">
+                    {formatDateBR(task.previsaoPaceFim)}
+                  </span>
+                </div>
+              )}
+              {task.paceDesvioDias != null && task.paceDesvioDias !== 0 && (
+                <div>
+                  <span className="text-muted-foreground">Ritmo: </span>
+                  <span
+                    className={
+                      task.paceDesvioDias > 0
+                        ? "font-medium text-destructive"
+                        : "font-medium text-success"
+                    }
+                  >
+                    {task.paceDesvioDias > 0
+                      ? `${task.paceDesvioDias}d atrasado`
+                      : `${Math.abs(task.paceDesvioDias)}d adiantado`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );

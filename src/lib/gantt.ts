@@ -16,6 +16,16 @@ export interface GanttTask {
   etapa: keyof typeof ETAPAS_OBRA | null;
   etapaPercent: number;
   isAtrasada: boolean;
+  /** Duração planejada em dias (start → end). */
+  duracaoDias: number;
+  /**
+   * Previsão de término pelo ritmo atual (pace): a partir do % concluído e
+   * dos dias decorridos, projeta a data de término. null se não dá pra estimar
+   * (0% ou ainda não começou).
+   */
+  previsaoPaceFim: Date | null;
+  /** Dias de atraso/adiantamento do pace vs previsão planejada (+atrasado). */
+  paceDesvioDias: number | null;
 }
 
 export interface GanttGroup {
@@ -89,6 +99,25 @@ export async function getGanttData(filtro?: {
     const etapaPct = l.etapa ? ETAPAS_OBRA[l.etapa as keyof typeof ETAPAS_OBRA]?.percent ?? 0 : 0;
     const isAtrasada = end < today && etapaPct < 100;
 
+    const MS_DIA = 1000 * 60 * 60 * 24;
+    const duracaoDias = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / MS_DIA),
+    );
+
+    // Pace: pelo % concluído vs dias decorridos, projeta o término.
+    let previsaoPaceFim: Date | null = null;
+    let paceDesvioDias: number | null = null;
+    const diasDecorridos = (today.getTime() - start.getTime()) / MS_DIA;
+    if (etapaPct > 0 && etapaPct < 100 && diasDecorridos > 0) {
+      // ritmo = %/dia; dias totais estimados = 100 / ritmo
+      const ritmo = etapaPct / diasDecorridos;
+      const diasTotaisEstimados = 100 / ritmo;
+      const fim = new Date(start.getTime() + diasTotaisEstimados * MS_DIA);
+      previsaoPaceFim = fim;
+      paceDesvioDias = Math.round((fim.getTime() - end.getTime()) / MS_DIA);
+    }
+
     tasks.push({
       id: l.id,
       loteId: l.id,
@@ -104,6 +133,9 @@ export async function getGanttData(filtro?: {
       etapa: l.etapa as keyof typeof ETAPAS_OBRA | null,
       etapaPercent: etapaPct,
       isAtrasada,
+      duracaoDias,
+      previsaoPaceFim,
+      paceDesvioDias,
     });
   }
 

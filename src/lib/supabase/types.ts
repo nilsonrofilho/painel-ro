@@ -108,6 +108,8 @@ export interface FaseObraRow {
   data_fim: string | null;
   status: "pendente" | "em_andamento" | "concluida";
   ordem: number;
+  predecessora_id: string | null;
+  duracao_dias: number | null;
 }
 
 export interface FornecedorRow {
