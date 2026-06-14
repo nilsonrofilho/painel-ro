@@ -462,6 +462,135 @@ export async function getFasesTodosLotes(
   return Array.from(mapa.values()).sort((a, b) => b.orcamento - a.orcamento);
 }
 
+// ============================================================
+// Viabilidade
+// ============================================================
+import type {
+  EstudoViabilidade,
+  ViabilidadePrograma,
+  ViabilidadeCustosItbi,
+  ViabilidadeFluxo,
+  ZonaUrbanistica,
+  MunicipioParametros,
+  CubIndice,
+} from "@/lib/supabase/types";
+
+export async function getViabilidades(): Promise<EstudoViabilidade[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("estudos_viabilidade")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return (data ?? []) as EstudoViabilidade[];
+}
+
+export async function getViabilidade(
+  id: string,
+): Promise<EstudoViabilidade | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("estudos_viabilidade")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data as EstudoViabilidade | null;
+}
+
+export async function getViabilidadeProgramas(
+  estudoId: string,
+): Promise<ViabilidadePrograma[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("viabilidade_programa")
+    .select("*")
+    .eq("estudo_id", estudoId)
+    .order("ordem");
+  return (data ?? []) as ViabilidadePrograma[];
+}
+
+export async function getViabilidadeCustos(
+  estudoId: string,
+): Promise<ViabilidadeCustosItbi[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("viabilidade_custos_itbi")
+    .select("*")
+    .eq("estudo_id", estudoId)
+    .order("cidade");
+  return (data ?? []) as ViabilidadeCustosItbi[];
+}
+
+export async function getViabilidadeFluxo(
+  estudoId: string,
+): Promise<ViabilidadeFluxo[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("viabilidade_fluxo")
+    .select("*")
+    .eq("estudo_id", estudoId)
+    .order("periodo");
+  return (data ?? []) as ViabilidadeFluxo[];
+}
+
+export async function getZonas(
+  municipio?: string,
+): Promise<ZonaUrbanistica[]> {
+  const supabase = await createClient();
+  let query = supabase.from("zonas_urbanisticas").select("*").order("zona");
+  if (municipio) query = query.eq("municipio", municipio);
+  const { data } = await query;
+  return (data ?? []) as ZonaUrbanistica[];
+}
+
+export async function getZona(id: string): Promise<ZonaUrbanistica | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("zonas_urbanisticas")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data as ZonaUrbanistica | null;
+}
+
+export async function getMunicipiosParametros(): Promise<
+  MunicipioParametros[]
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("municipios_parametros")
+    .select("*")
+    .order("municipio");
+  return (data ?? []) as MunicipioParametros[];
+}
+
+export async function getCubIndices(): Promise<CubIndice[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cub_indices")
+    .select("*")
+    .order("mes_referencia", { ascending: false });
+  return (data ?? []) as CubIndice[];
+}
+
+/** CUB mais recente para a combinação estado+padrão+tipo. */
+export async function getCubVigente(
+  estado: string,
+  padrao: string,
+  tipoProjeto: string,
+): Promise<CubIndice | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cub_indices")
+    .select("*")
+    .eq("estado", estado)
+    .eq("padrao", padrao)
+    .eq("tipo_projeto", tipoProjeto)
+    .order("mes_referencia", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as CubIndice | null;
+}
+
 export async function getLotesParaGantt() {
   const supabase = await createClient();
   const { data: lotes } = await supabase

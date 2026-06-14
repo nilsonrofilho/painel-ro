@@ -200,6 +200,134 @@ export interface DocumentoRow {
   uploaded_at: string;
 }
 
+export interface MunicipioParametrosRow {
+  id: string;
+  municipio: string;
+  estado: string;
+  codigo_ibge: string | null;
+  itbi_aliquota_pct: number;
+  itbi_base: "valor_transacao" | "valor_venal" | "maior_entre";
+  cub_estado: string | null;
+  areas_publicas_min_pct: number | null;
+  vigencia_mes: string | null;
+  observacao: string | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CubIndiceRow {
+  id: string;
+  estado: string;
+  padrao: "baixo" | "normal" | "alto";
+  tipo_projeto: "R1" | "R8" | "R16" | "PP4" | "CAL8" | "loteamento" | "outro";
+  valor_m2: number;
+  mes_referencia: string;
+  fonte: string | null;
+  created_at: string;
+}
+
+export interface ZonaUrbanisticaRow {
+  id: string;
+  municipio_id: string | null;
+  municipio: string;
+  estado: string;
+  zona: string;
+  descricao: string | null;
+  densidade: string | null;
+  to_pct: number;
+  ca_basico: number;
+  ca_maximo: number | null;
+  ca_minimo: number | null;
+  recuo_frontal_m: number | null;
+  recuo_lateral_m: number | null;
+  recuo_fundos_m: number | null;
+  gabarito_max_m: number | null;
+  gabarito_max_pavimentos: number | null;
+  taxa_permeabilidade_pct: number | null;
+  permite_outorga: boolean;
+  fator_outorga_fp: number | null;
+  fator_outorga_fs: number | null;
+  valor_m2_terreno_pgv: number | null;
+  created_at: string;
+}
+
+export interface EstudoViabilidadeRow {
+  id: string;
+  loteamento_id: string | null;
+  nome: string;
+  municipio: string | null;
+  estado: string | null;
+  municipio_id: string | null;
+  zona_id: string | null;
+  endereco: string | null;
+  lat: number | null;
+  lng: number | null;
+  tipo_empreendimento: "loteamento" | "casas" | "vertical" | "misto";
+  area_terreno_m2: number | null;
+  custo_terreno: number | null;
+  valor_venal_referencia: number | null;
+  itbi_aliquota_pct: number | null;
+  outorga_valor: number | null;
+  custos_cartorio: number | null;
+  ca_pretendido: number | null;
+  fator_eficiencia: number | null;
+  pe_direito_m: number | null;
+  custo_infraestrutura: number | null;
+  padrao_construcao: "baixo" | "normal" | "alto" | null;
+  tipo_projeto_cub: string | null;
+  cub_valor_m2: number | null;
+  bdi_pct: number | null;
+  comissao_venda_pct: number | null;
+  regime_tributario: "RET" | "RET_social" | "presumido" | "real" | null;
+  imposto_venda_pct: number | null;
+  custos_indiretos_pct: number | null;
+  distratos_pct: number | null;
+  custo_financeiro: number | null;
+  tma_pct: number | null;
+  status: "rascunho" | "aprovado" | "reprovado";
+  observacao: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ViabilidadeProgramaRow {
+  id: string;
+  estudo_id: string;
+  tipo_unidade: string;
+  descricao: string | null;
+  quantidade: number;
+  area_privativa_m2: number | null;
+  area_construida_m2: number | null;
+  preco_m2_venda: number | null;
+  valor_venda_unitario: number | null;
+  ordem: number;
+  created_at: string;
+}
+
+export interface ViabilidadeCustosItbiRow {
+  id: string;
+  estudo_id: string;
+  municipio_id: string | null;
+  cidade: string;
+  estado: string | null;
+  aliquota_pct: number;
+  base_calculo: number;
+  valor_estimado: number;
+  selecionado: boolean;
+  atualizado_em: string;
+}
+
+export interface ViabilidadeFluxoRow {
+  id: string;
+  estudo_id: string;
+  periodo: number;
+  rotulo: string | null;
+  entradas: number;
+  saidas: number;
+  created_at: string;
+}
+
 export interface DiarioObraRow {
   id: string;
   lote_id: string;
@@ -346,6 +474,71 @@ export interface Database {
         Update: GenericUpdate<DiarioObraRow>;
         Relationships: [];
       };
+      municipios_parametros: {
+        Row: MunicipioParametrosRow;
+        Insert: GenericInsert<MunicipioParametrosRow> & {
+          municipio: string;
+          estado: string;
+        };
+        Update: GenericUpdate<MunicipioParametrosRow>;
+        Relationships: [];
+      };
+      cub_indices: {
+        Row: CubIndiceRow;
+        Insert: GenericInsert<CubIndiceRow> & {
+          estado: string;
+          padrao: "baixo" | "normal" | "alto";
+          tipo_projeto: string;
+          valor_m2: number;
+          mes_referencia: string;
+        };
+        Update: GenericUpdate<CubIndiceRow>;
+        Relationships: [];
+      };
+      zonas_urbanisticas: {
+        Row: ZonaUrbanisticaRow;
+        Insert: GenericInsert<ZonaUrbanisticaRow> & {
+          municipio: string;
+          estado: string;
+          zona: string;
+        };
+        Update: GenericUpdate<ZonaUrbanisticaRow>;
+        Relationships: [];
+      };
+      estudos_viabilidade: {
+        Row: EstudoViabilidadeRow;
+        Insert: GenericInsert<EstudoViabilidadeRow> & { nome: string };
+        Update: GenericUpdate<EstudoViabilidadeRow>;
+        Relationships: [];
+      };
+      viabilidade_programa: {
+        Row: ViabilidadeProgramaRow;
+        Insert: GenericInsert<ViabilidadeProgramaRow> & {
+          estudo_id: string;
+          tipo_unidade: string;
+        };
+        Update: GenericUpdate<ViabilidadeProgramaRow>;
+        Relationships: [];
+      };
+      viabilidade_custos_itbi: {
+        Row: ViabilidadeCustosItbiRow;
+        Insert: GenericInsert<ViabilidadeCustosItbiRow> & {
+          estudo_id: string;
+          cidade: string;
+          aliquota_pct: number;
+        };
+        Update: GenericUpdate<ViabilidadeCustosItbiRow>;
+        Relationships: [];
+      };
+      viabilidade_fluxo: {
+        Row: ViabilidadeFluxoRow;
+        Insert: GenericInsert<ViabilidadeFluxoRow> & {
+          estudo_id: string;
+          periodo: number;
+        };
+        Update: GenericUpdate<ViabilidadeFluxoRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -371,3 +564,10 @@ export type Corretor = CorretorRow;
 export type Documento = DocumentoRow;
 export type Material = MaterialRow;
 export type DiarioObra = DiarioObraRow;
+export type MunicipioParametros = MunicipioParametrosRow;
+export type CubIndice = CubIndiceRow;
+export type ZonaUrbanistica = ZonaUrbanisticaRow;
+export type EstudoViabilidade = EstudoViabilidadeRow;
+export type ViabilidadePrograma = ViabilidadeProgramaRow;
+export type ViabilidadeCustosItbi = ViabilidadeCustosItbiRow;
+export type ViabilidadeFluxo = ViabilidadeFluxoRow;

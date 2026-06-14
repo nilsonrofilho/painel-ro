@@ -16,6 +16,8 @@ import {
   HardHat,
   Package,
   BarChart3,
+  Landmark,
+  SlidersHorizontal,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -31,12 +33,14 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/loteamentos", label: "Loteamentos", icon: Building2 },
+  { href: "/viabilidade", label: "Viabilidade", icon: Landmark },
   { href: "/gantt", label: "Gantt de Obras", icon: GanttChartSquare },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/funcionarios", label: "Funcionários", icon: HardHat },
   { href: "/fornecedores", label: "Fornecedores", icon: Truck },
   { href: "/materiais", label: "Materiais", icon: Package },
   { href: "/corretores", label: "Corretores", icon: UserCog },
+  { href: "/parametros", label: "Parâmetros", icon: SlidersHorizontal },
 ];
 
 export function AppShell({

@@ -67,3 +67,71 @@ export const ESTADOS_BR = [
   "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
   "RS", "RO", "RR", "SC", "SP", "SE", "TO",
 ] as const;
+
+// ============================================================
+// Viabilidade de empreendimentos
+// ============================================================
+export const STATUS_VIABILIDADE = {
+  rascunho: { label: "Rascunho", color: "muted" },
+  aprovado: { label: "Aprovado", color: "success" },
+  reprovado: { label: "Reprovado", color: "destructive" },
+} as const;
+
+export type StatusViabilidade = keyof typeof STATUS_VIABILIDADE;
+
+export const TIPO_EMPREENDIMENTO = {
+  loteamento: "Loteamento",
+  casas: "Casas",
+  vertical: "Vertical (apartamentos)",
+  misto: "Misto",
+} as const;
+
+export const TIPO_UNIDADE = [
+  "Lote",
+  "Casa isolada",
+  "Casa geminada",
+  "Apartamento",
+  "Loja",
+  "Sala comercial",
+  "Outro",
+] as const;
+
+export const PADRAO_CONSTRUCAO = {
+  baixo: "Baixo",
+  normal: "Normal",
+  alto: "Alto",
+} as const;
+
+export const TIPO_PROJETO_CUB = [
+  "R1",
+  "R8",
+  "R16",
+  "PP4",
+  "CAL8",
+  "loteamento",
+  "outro",
+] as const;
+
+// Regime tributário → alíquota efetiva sobre a venda (pré-preenche imposto_venda_pct)
+export const REGIME_TRIBUTARIO = {
+  RET: { label: "RET (incorporação)", imposto_pct: 4 },
+  RET_social: { label: "RET social (HIS)", imposto_pct: 1 },
+  presumido: { label: "Lucro presumido", imposto_pct: 6.73 },
+  real: { label: "Lucro real", imposto_pct: 0 },
+} as const;
+
+export type RegimeTributario = keyof typeof REGIME_TRIBUTARIO;
+
+export const ITBI_BASE = {
+  valor_transacao: "Valor da transação",
+  valor_venal: "Valor venal",
+  maior_entre: "Maior entre (venal × transação)",
+} as const;
+
+export const CLIMA_DIARIO = {
+  ensolarado: "☀️ Ensolarado",
+  parcialmente_nublado: "⛅ Parcialmente nublado",
+  nublado: "☁️ Nublado",
+  garoa: "🌦️ Garoa",
+  chuvoso: "🌧️ Chuvoso",
+} as const;
