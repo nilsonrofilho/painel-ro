@@ -11,6 +11,7 @@ import {
   HardHat,
   FileText,
   Ruler,
+  CalendarDays,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
   getFuncionarios,
   getMateriaisCatalogo,
   getGastosTotaisLote,
+  getDiariosDoLote,
 } from "@/lib/queries";
 import { formatBRL, formatDateBR } from "@/lib/utils";
 import { ETAPAS_OBRA } from "@/lib/constants";
@@ -42,6 +44,7 @@ import { VendaTab } from "./tabs/venda";
 import { ObraCustosTab } from "./tabs/obra-custos";
 import { MateriaisTab } from "./tabs/materiais";
 import { MaoDeObraTab } from "./tabs/mao-de-obra";
+import { DiarioObraTab } from "./tabs/diario-obra";
 import { DocumentosTab } from "./tabs/documentos";
 import { DetalhesTecnicosTab } from "./tabs/detalhes-tecnicos";
 
@@ -68,6 +71,7 @@ export default async function LoteDetalhePage({ params }: Props) {
     funcionarios,
     catalogoMateriais,
     gastoTotal,
+    diarios,
   ] = await Promise.all([
     getVendasDoLote(id),
     getFasesDoLote(id),
@@ -79,6 +83,7 @@ export default async function LoteDetalhePage({ params }: Props) {
     getFuncionarios(),
     getMateriaisCatalogo(),
     getGastosTotaisLote(id),
+    getDiariosDoLote(id),
   ]);
 
   const etapaCfg = ETAPAS_OBRA[lote.etapa ?? "planejamento"];
@@ -212,6 +217,9 @@ export default async function LoteDetalhePage({ params }: Props) {
           <TabsTrigger value="mao-de-obra" icon={<HardHat className="h-4 w-4" />}>
             Mão de Obra
           </TabsTrigger>
+          <TabsTrigger value="diario" icon={<CalendarDays className="h-4 w-4" />}>
+            Diário de Obra
+          </TabsTrigger>
           <TabsTrigger value="documentos" icon={<FileText className="h-4 w-4" />}>
             Documentos
           </TabsTrigger>
@@ -249,6 +257,13 @@ export default async function LoteDetalhePage({ params }: Props) {
           <MaoDeObraTab
             lote={lote}
             alocacoes={alocacoes}
+            funcionarios={funcionarios}
+          />
+        </TabsContent>
+        <TabsContent value="diario">
+          <DiarioObraTab
+            lote={lote}
+            diarios={diarios}
             funcionarios={funcionarios}
           />
         </TabsContent>

@@ -291,6 +291,18 @@ export async function getDocumentosDoLote(
   return data ?? [];
 }
 
+export async function getDiariosDoLote(
+  loteId: string,
+): Promise<import("@/lib/supabase/types").DiarioObra[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("diarios_obra")
+    .select("*")
+    .eq("lote_id", loteId)
+    .order("data", { ascending: false });
+  return (data ?? []) as import("@/lib/supabase/types").DiarioObra[];
+}
+
 export async function getDashboardStats(filtro?: FiltroLote) {
   const supabase = await createClient();
   const loteIds = filtro ? await resolverLoteIds(filtro) : null;

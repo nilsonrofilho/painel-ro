@@ -200,6 +200,28 @@ export interface DocumentoRow {
   uploaded_at: string;
 }
 
+export interface DiarioObraRow {
+  id: string;
+  lote_id: string;
+  data: string;
+  responsavel_id: string | null;
+  total_efetivo: number;
+  presentes: number;
+  ausentes: number;
+  atividades_executadas: number;
+  clima:
+    | "ensolarado"
+    | "nublado"
+    | "chuvoso"
+    | "parcialmente_nublado"
+    | "garoa"
+    | null;
+  resumo_atividades: string | null;
+  observacao: string | null;
+  fotos: string[];
+  created_at: string;
+}
+
 // ============================================================
 // Database interface (para createBrowserClient/createServerClient)
 // ============================================================
@@ -315,6 +337,15 @@ export interface Database {
         Update: GenericUpdate<MaterialRow>;
         Relationships: [];
       };
+      diarios_obra: {
+        Row: DiarioObraRow;
+        Insert: GenericInsert<DiarioObraRow> & {
+          lote_id: string;
+          data: string;
+        };
+        Update: GenericUpdate<DiarioObraRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -339,3 +370,4 @@ export type Alocacao = AlocacaoRow;
 export type Corretor = CorretorRow;
 export type Documento = DocumentoRow;
 export type Material = MaterialRow;
+export type DiarioObra = DiarioObraRow;
