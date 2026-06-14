@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { resolverLoteIds, type FiltroLote } from "@/lib/filters";
+import {
+  resolverLoteIds,
+  loteamentoIdDoLote,
+  type FiltroLote,
+} from "@/lib/filters";
 
 export async function getVendasPorMes(meses = 12, filtro?: FiltroLote) {
   const supabase = await createClient();
@@ -50,9 +54,16 @@ export async function getVendasPorMes(meses = 12, filtro?: FiltroLote) {
 
 export async function getGastosPorLoteamento(filtro?: FiltroLote) {
   const supabase = await createClient();
+
+  // Determina qual loteamento restringir: o do filtro, ou o do lote filtrado
+  let loteamentoIdAlvo = filtro?.loteamentoId;
+  if (!loteamentoIdAlvo && filtro?.loteId) {
+    loteamentoIdAlvo = (await loteamentoIdDoLote(filtro.loteId)) ?? undefined;
+  }
+
   let loteamentosQuery = supabase.from("loteamentos").select("id, nome");
-  if (filtro?.loteamentoId) {
-    loteamentosQuery = loteamentosQuery.eq("id", filtro.loteamentoId);
+  if (loteamentoIdAlvo) {
+    loteamentosQuery = loteamentosQuery.eq("id", loteamentoIdAlvo);
   }
   const { data: loteamentos } = await loteamentosQuery;
   if (!loteamentos) return [];

@@ -19,9 +19,27 @@ export function parseFiltro(params?: {
 }
 
 /**
+ * Resolve o loteamento_id ao qual um lote pertence (via quadra).
+ * Retorna null se o lote não existe.
+ */
+export async function loteamentoIdDoLote(
+  loteId: string,
+): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("lotes")
+    .select("quadra:quadras(loteamento_id)")
+    .eq("id", loteId)
+    .single();
+  const quadra = data?.quadra as unknown as { loteamento_id: string } | null;
+  return quadra?.loteamento_id ?? null;
+}
+
+/**
  * Resolve a lista de IDs de lote que correspondem ao filtro.
  * - Sem filtro: retorna null (= "todos", sem restrição).
- * - loteId definido: retorna [loteId].
+ * - loteId definido: retorna [loteId], desde que pertença ao loteamento
+ *   filtrado (se houver). Se for de outro loteamento, retorna [] (vazio).
  * - só loteamentoId: retorna todos os lotes daquele loteamento.
  *
  * Retornar null evita queries desnecessárias quando não há filtro.
@@ -29,7 +47,14 @@ export function parseFiltro(params?: {
 export async function resolverLoteIds(
   filtro: FiltroLote,
 ): Promise<string[] | null> {
-  if (filtro.loteId) return [filtro.loteId];
+  if (filtro.loteId) {
+    // Coerência: lote precisa pertencer ao loteamento filtrado (se houver)
+    if (filtro.loteamentoId) {
+      const lotamentoReal = await loteamentoIdDoLote(filtro.loteId);
+      if (lotamentoReal !== filtro.loteamentoId) return [];
+    }
+    return [filtro.loteId];
+  }
   if (!filtro.loteamentoId) return null;
 
   const supabase = await createClient();

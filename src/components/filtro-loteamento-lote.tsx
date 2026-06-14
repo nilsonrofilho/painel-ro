@@ -34,6 +34,17 @@ export function FiltroLoteamentoLote({ loteamentos, lotes }: Props) {
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
+  // Corrige URL inconsistente (ex: ?loteamento=A&lote=<de outro loteamento>):
+  // se o lote selecionado não pertence ao loteamento, reseta o lote.
+  React.useEffect(() => {
+    if (!loteSel || !loteamentoSel) return;
+    const pertence = lotesDoLoteamento.some((l) => l.id === loteSel);
+    if (!pertence) {
+      navigate({ loteamento: loteamentoSel });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loteSel, loteamentoSel, lotesDoLoteamento]);
+
   function onLoteamentoChange(value: string) {
     // Trocar loteamento reseta o lote selecionado
     navigate({ loteamento: value || undefined });
