@@ -93,6 +93,14 @@ export interface ComposicaoCustoRow {
   created_at: string;
 }
 
+export interface FasePadraoConfigRow {
+  id: string;
+  nome: string;
+  ordem: number;
+  duracao_dias: number;
+  created_at: string;
+}
+
 export interface VendaRow {
   id: string;
   lote_id: string;
@@ -564,6 +572,14 @@ export interface Database {
         Update: GenericUpdate<ComposicaoCustoRow>;
         Relationships: [];
       };
+      fases_padrao_config: {
+        Row: FasePadraoConfigRow;
+        Insert: GenericInsert<FasePadraoConfigRow> & {
+          nome: string;
+        };
+        Update: GenericUpdate<FasePadraoConfigRow>;
+        Relationships: [];
+      };
       diarios_obra: {
         Row: DiarioObraRow;
         Insert: GenericInsert<DiarioObraRow> & {
@@ -689,6 +705,7 @@ export type Corretor = CorretorRow;
 export type Documento = DocumentoRow;
 export type Material = MaterialRow;
 export type ComposicaoCusto = ComposicaoCustoRow;
+export type FasePadraoConfig = FasePadraoConfigRow;
 export type DiarioObra = DiarioObraRow;
 export type LancamentoFinanceiro = LancamentoFinanceiroRow;
 export type Investidor = InvestidorRow;

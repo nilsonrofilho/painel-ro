@@ -80,20 +80,42 @@ const FASES_PADRAO = [
   "Documentação Final",
 ] as const;
 
+/**
+ * Lê o modelo de fases padrão configurado no banco (tabela editável em
+ * Parâmetros). Se a tabela estiver vazia ou não existir ainda (migration 0015
+ * não aplicada), cai no modelo hardcoded — assim a feature nunca quebra.
+ */
+async function getModeloFasesPadrao(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<{ nome: string; duracao_dias: number | null }[]> {
+  const { data, error } = await supabase
+    .from("fases_padrao_config")
+    .select("nome, ordem, duracao_dias")
+    .order("ordem");
+  if (!error && data && data.length > 0) {
+    return data.map((f) => ({ nome: f.nome, duracao_dias: f.duracao_dias }));
+  }
+  return FASES_PADRAO.map((nome) => ({
+    nome,
+    duracao_dias: DURACOES_PADRAO_FASE[nome] ?? null,
+  }));
+}
+
 export async function seedFasesPadrao(loteId: string) {
   const supabase = await createClient();
+  const modelo = await getModeloFasesPadrao(supabase);
 
-  // 1) Insere as 8 fases padrão com a duração padrão de cada uma.
+  // 1) Insere as fases padrão (do modelo configurado) com suas durações.
   const { data: inseridas, error } = await supabase
     .from("fases_obra")
     .insert(
-      FASES_PADRAO.map((nome, i) => ({
+      modelo.map((m, i) => ({
         lote_id: loteId,
-        nome,
+        nome: m.nome,
         ordem: i + 1,
         gasto: 0,
         status: "pendente" as const,
-        duracao_dias: DURACOES_PADRAO_FASE[nome] ?? null,
+        duracao_dias: m.duracao_dias,
       })),
     )
     .select("id, nome, ordem, duracao_dias, predecessora_id, data_inicio, data_fim");
@@ -132,6 +154,27 @@ export async function seedFasesPadrao(loteId: string) {
   revalidatePath("/fases-obra");
   revalidatePath("/gantt");
   revalidatePath("/relatorios");
+}
+
+/**
+ * Aplica as fases padrão a VÁRIOS lotes de uma vez (edição em massa). Pula
+ * lotes que já têm fases para não duplicar. Retorna quantos foram semeados.
+ */
+export async function seedFasesPadraoEmMassa(loteIds: string[]) {
+  const supabase = await createClient();
+  let aplicados = 0;
+  for (const loteId of loteIds) {
+    const { count } = await supabase
+      .from("fases_obra")
+      .select("id", { count: "exact", head: true })
+      .eq("lote_id", loteId);
+    if ((count ?? 0) > 0) continue; // já tem fases
+    await seedFasesPadrao(loteId);
+    aplicados++;
+  }
+  revalidatePath("/fases-obra");
+  revalidatePath("/gantt");
+  return { aplicados };
 }
 
 /**

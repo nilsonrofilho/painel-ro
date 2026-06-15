@@ -48,23 +48,35 @@ import type {
   MunicipioParametros,
   CubIndice,
   ZonaUrbanistica,
+  FasePadraoConfig,
 } from "@/lib/supabase/types";
+import { FasesPadraoTab } from "./fases-padrao-tab";
 
 interface Props {
   municipios: MunicipioParametros[];
   cubs: CubIndice[];
   zonas: ZonaUrbanistica[];
+  fasesPadrao: FasePadraoConfig[];
 }
 
-export function ParametrosClient({ municipios, cubs, zonas }: Props) {
+export function ParametrosClient({
+  municipios,
+  cubs,
+  zonas,
+  fasesPadrao,
+}: Props) {
   return (
-    <Tabs defaultValue="municipios">
+    <Tabs defaultValue="fases-padrao">
       <TabsList>
+        <TabsTrigger value="fases-padrao">Fases padrão</TabsTrigger>
         <TabsTrigger value="municipios">Municípios / ITBI</TabsTrigger>
         <TabsTrigger value="cub">CUB</TabsTrigger>
         <TabsTrigger value="zonas">Zonas de uso</TabsTrigger>
       </TabsList>
 
+      <TabsContent value="fases-padrao">
+        <FasesPadraoTab fases={fasesPadrao} />
+      </TabsContent>
       <TabsContent value="municipios">
         <MunicipiosTab municipios={municipios} />
       </TabsContent>

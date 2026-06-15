@@ -14,6 +14,7 @@ import type {
   Documento,
   Material,
   ComposicaoCusto,
+  FasePadraoConfig,
 } from "@/lib/supabase/types";
 
 const ID_NENHUM = "00000000-0000-0000-0000-000000000000";
@@ -710,6 +711,15 @@ export async function getLotesComProgressoFases(
   return linhas.sort(
     (a, b) => b.totalFases - a.totalFases || b.pctConcluido - a.pctConcluido,
   );
+}
+
+export async function getFasesPadraoConfig(): Promise<FasePadraoConfig[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("fases_padrao_config")
+    .select("*")
+    .order("ordem");
+  return (data ?? []) as FasePadraoConfig[];
 }
 
 // ============================================================

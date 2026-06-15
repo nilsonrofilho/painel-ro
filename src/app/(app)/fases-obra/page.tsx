@@ -18,6 +18,7 @@ import { FiltroLoteamentoLote } from "@/components/filtro-loteamento-lote";
 import { getLotesComProgressoFases } from "@/lib/queries";
 import { getOpcoesFiltro, parseFiltro } from "@/lib/filters";
 import { formatBRL, formatPercent } from "@/lib/utils";
+import { AplicarFasesEmMassa } from "./aplicar-massa";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,14 @@ export default async function FasesObraPage({ searchParams }: Props) {
   ]);
 
   const comFases = lotes.filter((l) => l.totalFases > 0);
+  const semFases = lotes
+    .filter((l) => l.totalFases === 0)
+    .map((l) => ({
+      loteId: l.loteId,
+      numero: l.numero,
+      loteamentoNome: l.loteamentoNome,
+      quadraIdentificador: l.quadraIdentificador,
+    }));
   const totalOrcado = lotes.reduce((s, l) => s + l.orcado, 0);
   const totalGasto = lotes.reduce((s, l) => s + l.gasto, 0);
   const pctMedio =
@@ -55,6 +64,8 @@ export default async function FasesObraPage({ searchParams }: Props) {
           lotes={opcoes.lotes}
         />
       </div>
+
+      {semFases.length > 0 && <AplicarFasesEmMassa lotes={semFases} />}
 
       {lotes.length === 0 ? (
         <EmptyState

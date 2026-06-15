@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { BackButton } from "@/components/back-button";
 import { StatusLoteBadge } from "@/components/status-badge";
-import { EtapaProgress } from "@/components/etapa-progress";
+import { FasesProgress } from "@/components/fases-progress";
 import {
   getLoteContexto,
   getVendasDoLote,
@@ -202,7 +202,7 @@ export default async function LoteDetalhePage({ params }: Props) {
             </div>
 
             <div className="mt-4 rounded-lg bg-muted/30 p-3">
-              <EtapaProgress etapa={lote.etapa} showSteps />
+              <FasesProgress fases={fases} />
             </div>
           </div>
         </div>
