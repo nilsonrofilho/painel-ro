@@ -35,7 +35,10 @@ export async function updateSession(request: NextRequest) {
   const isPublicAsset =
     url.pathname.startsWith("/_next") ||
     url.pathname.startsWith("/favicon") ||
-    url.pathname.startsWith("/api/public");
+    url.pathname.startsWith("/api/public") ||
+    // Rota do cron tem sua própria proteção (CRON_SECRET); a Vercel a chama
+    // sem sessão de usuário, então não pode ser barrada/redirecionada aqui.
+    url.pathname.startsWith("/api/cron");
   // Link público de acompanhamento do investidor (sem login, read-only)
   const isPublicaInvestidor = url.pathname.startsWith("/acompanhamento");
 
