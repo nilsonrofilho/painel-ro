@@ -12,6 +12,8 @@ import type {
   LancamentoMaterial,
   Alocacao,
   Documento,
+  Material,
+  ComposicaoCusto,
 } from "@/lib/supabase/types";
 
 const ID_NENHUM = "00000000-0000-0000-0000-000000000000";
@@ -186,25 +188,130 @@ export async function getLoteContexto(loteId: string): Promise<{
   return { lote, quadra, loteamento };
 }
 
-export async function getMateriaisCatalogo(): Promise<import("@/lib/supabase/types").Material[]> {
+export async function getMateriaisCatalogo(): Promise<Material[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("materiais")
     .select("*")
     .order("nome");
-  return (data ?? []) as import("@/lib/supabase/types").Material[];
+  return (data ?? []) as Material[];
 }
 
 export async function getMaterial(
   id: string,
-): Promise<import("@/lib/supabase/types").Material | null> {
+): Promise<Material | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("materiais")
     .select("*")
     .eq("id", id)
     .single();
-  return data as import("@/lib/supabase/types").Material | null;
+  return data as Material | null;
+}
+
+export interface MaterialComEstoque extends Material {
+  saldo_estoque: number;
+  abaixo_minimo: boolean;
+}
+
+/**
+ * Catálogo de materiais com saldo de estoque derivado dos lançamentos
+ * (entradas somam, saídas subtraem) que têm material_id.
+ */
+export async function getMateriaisComEstoque(): Promise<MaterialComEstoque[]> {
+  const supabase = await createClient();
+  const [{ data: materiais }, { data: lancs }] = await Promise.all([
+    supabase.from("materiais").select("*").order("nome"),
+    supabase
+      .from("lancamentos_material")
+      .select("material_id, tipo, quantidade")
+      .not("material_id", "is", null),
+  ]);
+
+  const saldoPorMaterial = new Map<string, number>();
+  for (const l of lancs ?? []) {
+    if (!l.material_id) continue;
+    const delta =
+      l.tipo === "entrada"
+        ? Number(l.quantidade ?? 0)
+        : -Number(l.quantidade ?? 0);
+    saldoPorMaterial.set(
+      l.material_id,
+      (saldoPorMaterial.get(l.material_id) ?? 0) + delta,
+    );
+  }
+
+  return (materiais ?? []).map((m) => {
+    const material = m as Material;
+    const saldo = saldoPorMaterial.get(material.id) ?? 0;
+    const minimo = Number(material.estoque_minimo ?? 0);
+    return {
+      ...material,
+      saldo_estoque: saldo,
+      abaixo_minimo: minimo > 0 && saldo < minimo,
+    };
+  });
+}
+
+// ============================================================
+// Curva ABC de materiais (por gasto)
+// ============================================================
+export interface ItemCurvaABC {
+  material: string;
+  valor: number;
+  qtd_lancamentos: number;
+  pct: number;
+  pct_acumulado: number;
+  classe: "A" | "B" | "C";
+}
+
+export async function getCurvaABCMateriais(
+  filtro?: FiltroLote,
+): Promise<ItemCurvaABC[]> {
+  const supabase = await createClient();
+  const loteIds = filtro ? await resolverLoteIds(filtro) : null;
+
+  let query = supabase
+    .from("lancamentos_material")
+    .select("material, valor_total, tipo, lote_id")
+    .eq("tipo", "saida");
+  if (loteIds !== null) {
+    if (loteIds.length === 0) return [];
+    query = query.in("lote_id", loteIds);
+  }
+  const { data } = await query;
+
+  // Agrega gasto por nome de material
+  const mapa = new Map<string, { valor: number; qtd: number }>();
+  for (const l of data ?? []) {
+    const nome = (l.material ?? "").trim() || "Sem nome";
+    const ex = mapa.get(nome) ?? { valor: 0, qtd: 0 };
+    ex.valor += Number(l.valor_total ?? 0);
+    ex.qtd += 1;
+    mapa.set(nome, ex);
+  }
+
+  const itens = Array.from(mapa.entries())
+    .map(([material, v]) => ({ material, valor: v.valor, qtd: v.qtd }))
+    .filter((i) => i.valor > 0)
+    .sort((a, b) => b.valor - a.valor);
+
+  const total = itens.reduce((s, i) => s + i.valor, 0);
+  let acumulado = 0;
+  return itens.map((i) => {
+    const pct = total > 0 ? (i.valor / total) * 100 : 0;
+    acumulado += pct;
+    const classe: "A" | "B" | "C" =
+      acumulado <= 80 ? "A" : acumulado <= 95 ? "B" : "C";
+    return {
+      material: i.material,
+      valor: i.valor,
+      qtd_lancamentos: i.qtd,
+      pct,
+      pct_acumulado: acumulado,
+      classe,
+    };
+  });
 }
 
 export async function getFornecedores(): Promise<Fornecedor[]> {
@@ -252,6 +359,35 @@ export async function getFasesDoLote(loteId: string): Promise<FaseObra[]> {
     .eq("lote_id", loteId)
     .order("ordem");
   return data ?? [];
+}
+
+/** Itens de composição de custo de todas as fases de um lote, agrupados por fase_id. */
+export async function getComposicoesDoLote(
+  loteId: string,
+): Promise<Record<string, ComposicaoCusto[]>> {
+  const supabase = await createClient();
+  const { data: fases } = await supabase
+    .from("fases_obra")
+    .select("id")
+    .eq("lote_id", loteId);
+  const faseIds = (fases ?? []).map((f) => f.id);
+  if (faseIds.length === 0) return {};
+
+  const { data } = await supabase
+    .from("composicao_custo")
+    .select("*")
+    .in("fase_id", faseIds)
+    .order("ordem");
+
+  const mapa: Record<
+    string,
+    ComposicaoCusto[]
+  > = {};
+  for (const item of data ?? []) {
+    const it = item as ComposicaoCusto;
+    (mapa[it.fase_id] ??= []).push(it);
+  }
+  return mapa;
 }
 
 export async function getMateriaisDoLote(

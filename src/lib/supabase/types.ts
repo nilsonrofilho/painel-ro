@@ -73,8 +73,22 @@ export interface MaterialRow {
   unidade: string | null;
   categoria: string | null;
   preco_referencia: number | null;
+  estoque_minimo: number | null;
   observacao: string | null;
   ativo: boolean;
+  created_at: string;
+}
+
+export interface ComposicaoCustoRow {
+  id: string;
+  fase_id: string;
+  material_id: string | null;
+  descricao: string;
+  unidade: string | null;
+  quantidade: number;
+  valor_unitario: number;
+  valor_total: number;
+  ordem: number;
   created_at: string;
 }
 
@@ -538,6 +552,15 @@ export interface Database {
         Update: GenericUpdate<MaterialRow>;
         Relationships: [];
       };
+      composicao_custo: {
+        Row: ComposicaoCustoRow;
+        Insert: GenericInsert<ComposicaoCustoRow> & {
+          fase_id: string;
+          descricao: string;
+        };
+        Update: GenericUpdate<ComposicaoCustoRow>;
+        Relationships: [];
+      };
       diarios_obra: {
         Row: DiarioObraRow;
         Insert: GenericInsert<DiarioObraRow> & {
@@ -662,6 +685,7 @@ export type Alocacao = AlocacaoRow;
 export type Corretor = CorretorRow;
 export type Documento = DocumentoRow;
 export type Material = MaterialRow;
+export type ComposicaoCusto = ComposicaoCustoRow;
 export type DiarioObra = DiarioObraRow;
 export type LancamentoFinanceiro = LancamentoFinanceiroRow;
 export type Investidor = InvestidorRow;

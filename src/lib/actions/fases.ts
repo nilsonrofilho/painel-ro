@@ -64,11 +64,14 @@ export async function deleteFase(id: string, loteId: string) {
 export async function seedFasesPadrao(loteId: string) {
   const supabase = await createClient();
   const padrao = [
-    { nome: "Fundação", ordem: 1 },
-    { nome: "Alvenaria", ordem: 2 },
-    { nome: "Cobertura", ordem: 3 },
-    { nome: "Instalações", ordem: 4 },
-    { nome: "Acabamento", ordem: 5 },
+    { nome: "Planejamento", ordem: 1 },
+    { nome: "Serviços preliminares", ordem: 2 },
+    { nome: "Fundação", ordem: 3 },
+    { nome: "Alvenaria", ordem: 4 },
+    { nome: "Cobertura", ordem: 5 },
+    { nome: "Acabamento", ordem: 6 },
+    { nome: "Concluído", ordem: 7 },
+    { nome: "Documentação Final", ordem: 8 },
   ];
   await supabase.from("fases_obra").insert(
     padrao.map((p) => ({

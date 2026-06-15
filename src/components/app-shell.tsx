@@ -66,6 +66,7 @@ const NAV: NavSection[] = [
       { href: "/funcionarios", label: "Funcionários", icon: HardHat },
       { href: "/fornecedores", label: "Fornecedores", icon: Truck },
       { href: "/materiais", label: "Materiais", icon: Package },
+      { href: "/curva-abc", label: "Curva ABC", icon: BarChart3 },
       { href: "/corretores", label: "Corretores", icon: UserCog },
     ],
   },

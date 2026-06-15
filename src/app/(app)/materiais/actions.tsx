@@ -44,6 +44,7 @@ const schema = z.object({
   unidade: z.string().optional(),
   categoria: z.string().optional(),
   preco_referencia: z.string().optional(),
+  estoque_minimo: z.string().optional(),
   observacao: z.string().optional(),
   ativo: z.enum(["ativo", "inativo"]),
 });
@@ -75,6 +76,7 @@ export function MaterialActions({
       unidade: material?.unidade ?? "",
       categoria: material?.categoria ?? "",
       preco_referencia: material?.preco_referencia?.toString() ?? "",
+      estoque_minimo: material?.estoque_minimo?.toString() ?? "",
       observacao: material?.observacao ?? "",
       ativo: material?.ativo === false ? "inativo" : "ativo",
     },
@@ -87,6 +89,7 @@ export function MaterialActions({
         unidade: material?.unidade ?? "",
         categoria: material?.categoria ?? "",
         preco_referencia: material?.preco_referencia?.toString() ?? "",
+        estoque_minimo: material?.estoque_minimo?.toString() ?? "",
         observacao: material?.observacao ?? "",
         ativo: material?.ativo === false ? "inativo" : "ativo",
       });
@@ -103,6 +106,7 @@ export function MaterialActions({
         preco_referencia: v.preco_referencia
           ? Number(v.preco_referencia)
           : null,
+        estoque_minimo: v.estoque_minimo ? Number(v.estoque_minimo) : null,
         observacao: v.observacao || null,
         ativo: v.ativo === "ativo",
       };
@@ -204,16 +208,23 @@ export function MaterialActions({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="preco_referencia">
-                  Preço de referência (R$)
-                </Label>
+                <Label htmlFor="preco_referencia">Preço ref. (R$)</Label>
                 <Input
                   id="preco_referencia"
                   type="number"
                   step="0.01"
                   {...register("preco_referencia")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="estoque_minimo">Estoque mínimo</Label>
+                <Input
+                  id="estoque_minimo"
+                  type="number"
+                  step="0.01"
+                  {...register("estoque_minimo")}
                 />
               </div>
               <div className="space-y-1.5">

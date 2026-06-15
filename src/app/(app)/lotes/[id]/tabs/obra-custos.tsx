@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Pencil, Loader2, Sparkles } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  Loader2,
+  Sparkles,
+  ChevronRight,
+  ListTree,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   ResponsiveContainer,
@@ -45,19 +53,34 @@ import {
 import { KPICard } from "@/components/kpi-card";
 import { ResumoEtapasChart } from "@/components/charts/resumo-etapas-chart";
 import { addFase, updateFase, deleteFase, seedFasesPadrao } from "@/lib/actions/fases";
-import { formatBRL, formatDateBR, formatPercent } from "@/lib/utils";
-import type { FaseObra, Lote } from "@/lib/supabase/types";
+import { formatBRL, formatDateBR, formatPercent, cn } from "@/lib/utils";
+import type {
+  FaseObra,
+  Lote,
+  ComposicaoCusto,
+  Material,
+} from "@/lib/supabase/types";
+import { ComposicaoFase } from "./composicao-fase";
 
 interface Props {
   lote: Lote;
   fases: FaseObra[];
   gastoTotal: number;
+  composicoes: Record<string, ComposicaoCusto[]>;
+  catalogo: Material[];
 }
 
-export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
+export function ObraCustosTab({
+  lote,
+  fases,
+  gastoTotal,
+  composicoes,
+  catalogo,
+}: Props) {
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [editingFase, setEditingFase] = React.useState<FaseObra | null>(null);
+  const [expandida, setExpandida] = React.useState<string | null>(null);
   const orcamentoTotal = Number(lote.orcamento_total ?? 0);
   const orcadoFases = fases.reduce(
     (s, f) => s + Number(f.orcamento ?? 0),
@@ -155,7 +178,11 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
   }
 
   async function handleSeed() {
-    if (!confirm("Adicionar 5 fases padrão (Fundação, Alvenaria, Cobertura, Instalações, Acabamento)?"))
+    if (
+      !confirm(
+        "Adicionar 8 fases padrão (Planejamento, Serviços preliminares, Fundação, Alvenaria, Cobertura, Acabamento, Concluído, Documentação Final)?",
+      )
+    )
       return;
     try {
       await seedFasesPadrao(lote.id);
@@ -245,6 +272,7 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8" />
                   <TableHead>Fase</TableHead>
                   <TableHead>Período</TableHead>
                   <TableHead className="text-right">Orçado</TableHead>
@@ -281,13 +309,41 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                   const predecessora = f.predecessora_id
                     ? fases.find((x) => x.id === f.predecessora_id)?.nome
                     : null;
+                  const itensFase = composicoes[f.id] ?? [];
+                  const aberta = expandida === f.id;
                   return (
-                    <TableRow key={f.id}>
+                    <React.Fragment key={f.id}>
+                    <TableRow>
+                      <TableCell className="pr-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() =>
+                            setExpandida((cur) => (cur === f.id ? null : f.id))
+                          }
+                          aria-label={aberta ? "Recolher composição" : "Ver composição"}
+                          aria-expanded={aberta}
+                        >
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              aberta && "rotate-90",
+                            )}
+                          />
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <p className="font-medium">{f.nome}</p>
                         {predecessora && (
                           <p className="text-[10px] text-muted-foreground">
                             após: {predecessora}
+                          </p>
+                        )}
+                        {itensFase.length > 0 && (
+                          <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <ListTree className="h-3 w-3" />
+                            {itensFase.length} item(ns) na composição
                           </p>
                         )}
                       </TableCell>
@@ -349,6 +405,29 @@ export function ObraCustosTab({ lote, fases, gastoTotal }: Props) {
                         </div>
                       </TableCell>
                     </TableRow>
+                    {aberta && (
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={8} className="p-4">
+                          <div className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+                            <ListTree className="h-4 w-4 text-primary" />
+                            Composição de custo — {f.nome}
+                          </div>
+                          <ComposicaoFase
+                            faseId={f.id}
+                            loteId={lote.id}
+                            itens={itensFase}
+                            catalogo={catalogo}
+                          />
+                          {itensFase.length > 0 && (
+                            <p className="mt-2 text-[11px] text-muted-foreground">
+                              O orçamento desta fase é calculado automaticamente
+                              pela soma dos itens.
+                            </p>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </TableBody>

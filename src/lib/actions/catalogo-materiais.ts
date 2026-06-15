@@ -10,6 +10,7 @@ const materialSchema = z.object({
   unidade: z.string().optional().nullable(),
   categoria: z.string().optional().nullable(),
   preco_referencia: z.coerce.number().optional().nullable(),
+  estoque_minimo: z.coerce.number().optional().nullable(),
   observacao: z.string().optional().nullable(),
   ativo: z.boolean().default(true),
 });
