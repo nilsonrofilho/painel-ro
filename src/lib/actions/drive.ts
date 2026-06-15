@@ -17,11 +17,17 @@ export async function vincularPastaDrive(loteId: string, input: string) {
     );
   }
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("lotes")
     .update({ drive_folder_id: folderId })
-    .eq("id", loteId);
+    .eq("id", loteId)
+    .select("id, drive_folder_id");
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error(
+      "Não foi possível salvar a pasta (lote não encontrado ou sem permissão). Faça login novamente e tente de novo.",
+    );
+  }
   revalidatePath(`/lotes/${loteId}`);
   return { folderId };
 }
