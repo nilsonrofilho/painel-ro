@@ -18,7 +18,10 @@ usuário precisar subir o arquivo duas vezes. As pastas já existem na conta
 - **Autenticação do app:** conta de serviço do Google (robô
   `painel-ro-drive@painel-499502.iam.gserviceaccount.com`), escopo
   `drive.readonly`. As pastas são compartilhadas com o email do robô.
-- **Gatilho:** Vercel Cron a cada ~10 min chama `/api/cron/sync-drive`.
+- **Gatilho:** Vercel Cron chama `/api/cron/sync-drive`. Plano da conta é
+  **Hobby**, que só permite cron 1×/dia → agendado para 06:00 UTC (`0 6 * * *`).
+  Para trazer arquivos na hora, o usuário usa o botão "Sincronizar agora" no
+  lote (chama a mesma `syncDrive(loteId)`).
 - **O que é guardado:** só o link (`webViewLink`) do arquivo no Drive — nada é
   copiado para o Supabase Storage.
 - **Sem duplicata:** cada arquivo do Drive é importado uma vez, rastreado por

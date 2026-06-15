@@ -181,7 +181,8 @@ export function DocumentosTab({ lote, documentos }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-success/30 bg-success/5 p-2.5">
               <span className="flex items-center gap-1.5 text-xs font-medium text-success">
                 <Check className="h-3.5 w-3.5" />
-                Pasta vinculada — sincroniza sozinho a cada poucos minutos.
+                Pasta vinculada — sincroniza 1×/dia. Use &quot;Sincronizar
+                agora&quot; para trazer na hora.
               </span>
               <Button
                 type="button"
