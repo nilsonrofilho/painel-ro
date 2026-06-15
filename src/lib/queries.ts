@@ -607,6 +607,112 @@ export async function getFasesTodosLotes(
 }
 
 // ============================================================
+// Visão geral de fases por lote (página /fases-obra)
+// ============================================================
+export interface ProgressoFasesLote {
+  loteId: string;
+  numero: string;
+  loteamentoNome: string;
+  quadraIdentificador: string;
+  status: "disponivel" | "reservado" | "vendido";
+  totalFases: number;
+  concluidas: number;
+  emAndamento: number;
+  pctConcluido: number;
+  orcado: number;
+  gasto: number;
+  proximaFase: string | null;
+}
+
+export async function getLotesComProgressoFases(
+  filtro?: FiltroLote,
+): Promise<ProgressoFasesLote[]> {
+  const supabase = await createClient();
+  const loteIds = filtro ? await resolverLoteIds(filtro) : null;
+  if (loteIds !== null && loteIds.length === 0) return [];
+
+  // 1) Lotes (com loteamento/quadra)
+  let lotesQuery = supabase
+    .from("lotes")
+    .select(
+      "id, numero, status, quadra:quadras(identificador, loteamento:loteamentos(nome))",
+    );
+  if (loteIds !== null) lotesQuery = lotesQuery.in("id", loteIds);
+  const { data: lotes } = await lotesQuery;
+  if (!lotes || lotes.length === 0) return [];
+
+  const ids = lotes.map((l) => l.id);
+
+  // 2) Fases de todos esses lotes (1 query) agregadas em memória por lote.
+  const { data: fases } = await supabase
+    .from("fases_obra")
+    .select("lote_id, nome, status, orcamento, gasto, ordem")
+    .in("lote_id", ids)
+    .order("ordem");
+
+  const porLote = new Map<
+    string,
+    {
+      total: number;
+      concluidas: number;
+      emAndamento: number;
+      orcado: number;
+      gasto: number;
+      proxima: string | null;
+    }
+  >();
+  for (const f of fases ?? []) {
+    const e =
+      porLote.get(f.lote_id) ??
+      {
+        total: 0,
+        concluidas: 0,
+        emAndamento: 0,
+        orcado: 0,
+        gasto: 0,
+        proxima: null as string | null,
+      };
+    e.total++;
+    if (f.status === "concluida") e.concluidas++;
+    else if (f.status === "em_andamento") e.emAndamento++;
+    e.orcado += Number(f.orcamento ?? 0);
+    e.gasto += Number(f.gasto ?? 0);
+    // próxima fase = primeira não concluída (já ordenado por `ordem`)
+    if (e.proxima === null && f.status !== "concluida") e.proxima = f.nome;
+    porLote.set(f.lote_id, e);
+  }
+
+  const linhas: ProgressoFasesLote[] = lotes.map((l) => {
+    const quadra = l.quadra as unknown as {
+      identificador: string;
+      loteamento: { nome: string } | null;
+    } | null;
+    const agg = porLote.get(l.id);
+    const total = agg?.total ?? 0;
+    const concluidas = agg?.concluidas ?? 0;
+    return {
+      loteId: l.id,
+      numero: l.numero,
+      loteamentoNome: quadra?.loteamento?.nome ?? "—",
+      quadraIdentificador: quadra?.identificador ?? "—",
+      status: l.status,
+      totalFases: total,
+      concluidas,
+      emAndamento: agg?.emAndamento ?? 0,
+      pctConcluido: total > 0 ? Math.round((concluidas / total) * 100) : 0,
+      orcado: agg?.orcado ?? 0,
+      gasto: agg?.gasto ?? 0,
+      proximaFase: agg?.proxima ?? null,
+    };
+  });
+
+  // ordena: lotes com fases primeiro, mais avançados no topo
+  return linhas.sort(
+    (a, b) => b.totalFases - a.totalFases || b.pctConcluido - a.pctConcluido,
+  );
+}
+
+// ============================================================
 // Investidores
 // ============================================================
 import type { Investidor } from "@/lib/supabase/types";

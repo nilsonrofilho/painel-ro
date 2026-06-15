@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import {
+  DURACOES_PADRAO_FASE,
+  calcularCronograma,
+  type FaseCronograma,
+} from "@/lib/cronograma";
 
 const faseSchema = z.object({
   lote_id: z.string().uuid(),
@@ -34,6 +39,7 @@ export async function addFase(input: FaseInput) {
     .insert({ ...clean(parsed as Record<string, unknown>), gasto: 0 });
   if (error) throw new Error(error.message);
   revalidatePath(`/lotes/${parsed.lote_id}`);
+  revalidatePath("/fases-obra");
   revalidatePath("/gantt");
   revalidatePath("/relatorios");
 }
@@ -48,6 +54,7 @@ export async function updateFase(id: string, input: Partial<FaseInput>) {
     .single();
   if (error) throw new Error(error.message);
   if (data) revalidatePath(`/lotes/${data.lote_id}`);
+  revalidatePath("/fases-obra");
   revalidatePath("/gantt");
   revalidatePath("/relatorios");
 }
@@ -57,32 +64,111 @@ export async function deleteFase(id: string, loteId: string) {
   const { error } = await supabase.from("fases_obra").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/lotes/${loteId}`);
+  revalidatePath("/fases-obra");
   revalidatePath("/gantt");
   revalidatePath("/relatorios");
 }
 
+const FASES_PADRAO = [
+  "Planejamento",
+  "Serviços preliminares",
+  "Fundação",
+  "Alvenaria",
+  "Cobertura",
+  "Acabamento",
+  "Concluído",
+  "Documentação Final",
+] as const;
+
 export async function seedFasesPadrao(loteId: string) {
   const supabase = await createClient();
-  const padrao = [
-    { nome: "Planejamento", ordem: 1 },
-    { nome: "Serviços preliminares", ordem: 2 },
-    { nome: "Fundação", ordem: 3 },
-    { nome: "Alvenaria", ordem: 4 },
-    { nome: "Cobertura", ordem: 5 },
-    { nome: "Acabamento", ordem: 6 },
-    { nome: "Concluído", ordem: 7 },
-    { nome: "Documentação Final", ordem: 8 },
-  ];
-  await supabase.from("fases_obra").insert(
-    padrao.map((p) => ({
-      lote_id: loteId,
-      nome: p.nome,
-      ordem: p.ordem,
-      gasto: 0,
-      status: "pendente" as const,
-    })),
-  );
+
+  // 1) Insere as 8 fases padrão com a duração padrão de cada uma.
+  const { data: inseridas, error } = await supabase
+    .from("fases_obra")
+    .insert(
+      FASES_PADRAO.map((nome, i) => ({
+        lote_id: loteId,
+        nome,
+        ordem: i + 1,
+        gasto: 0,
+        status: "pendente" as const,
+        duracao_dias: DURACOES_PADRAO_FASE[nome] ?? null,
+      })),
+    )
+    .select("id, nome, ordem, duracao_dias, predecessora_id, data_inicio, data_fim");
+  if (error) throw new Error(error.message);
+
+  const fases = (inseridas ?? []) as FaseCronograma[];
+  const ordenadas = [...fases].sort((a, b) => a.ordem - b.ordem);
+
+  // 2) Encadeia: cada fase tem como predecessora a anterior (cadeia linear).
+  for (let i = 1; i < ordenadas.length; i++) {
+    ordenadas[i].predecessora_id = ordenadas[i - 1].id;
+    await supabase
+      .from("fases_obra")
+      .update({ predecessora_id: ordenadas[i - 1].id })
+      .eq("id", ordenadas[i].id);
+  }
+
+  // 3) Se o lote tem data de início da obra, já grava o cronograma calculado.
+  const { data: lote } = await supabase
+    .from("lotes")
+    .select("data_inicio_obra")
+    .eq("id", loteId)
+    .single();
+  const inicioObra = (lote?.data_inicio_obra as string | null) ?? null;
+  if (inicioObra) {
+    const datas = calcularCronograma(ordenadas, inicioObra);
+    for (const d of datas) {
+      await supabase
+        .from("fases_obra")
+        .update({ data_inicio: d.data_inicio, data_fim: d.data_fim })
+        .eq("id", d.id);
+    }
+  }
+
   revalidatePath(`/lotes/${loteId}`);
+  revalidatePath("/fases-obra");
   revalidatePath("/gantt");
   revalidatePath("/relatorios");
+}
+
+/**
+ * Recalcula o cronograma de um lote: encadeia as datas das fases pelas durações
+ * a partir da data de início da obra (ou da menor data já preenchida) e GRAVA
+ * data_inicio/data_fim em cada fase.
+ */
+export async function recalcularCronograma(loteId: string) {
+  const supabase = await createClient();
+  const [{ data: fases }, { data: lote }] = await Promise.all([
+    supabase
+      .from("fases_obra")
+      .select("id, nome, ordem, duracao_dias, predecessora_id, data_inicio, data_fim")
+      .eq("lote_id", loteId),
+    supabase.from("lotes").select("data_inicio_obra").eq("id", loteId).single(),
+  ]);
+  const lista = (fases ?? []) as FaseCronograma[];
+  if (lista.length === 0) {
+    throw new Error("Cadastre as fases antes de recalcular o cronograma.");
+  }
+  const inicioObra = (lote?.data_inicio_obra as string | null) ?? null;
+  const datas = calcularCronograma(lista, inicioObra);
+  if (datas.length === 0) {
+    throw new Error(
+      "Defina a data de início da obra do lote (ou ao menos uma data de fase) para calcular o cronograma.",
+    );
+  }
+  for (const d of datas) {
+    const { error } = await supabase
+      .from("fases_obra")
+      .update({ data_inicio: d.data_inicio, data_fim: d.data_fim })
+      .eq("id", d.id);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath(`/lotes/${loteId}`);
+  revalidatePath("/fases-obra");
+  revalidatePath("/gantt");
+  revalidatePath("/relatorios");
+  return { fasesAtualizadas: datas.length };
 }

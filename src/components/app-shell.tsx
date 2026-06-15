@@ -10,6 +10,7 @@ import {
   Truck,
   UserCog,
   GanttChartSquare,
+  ListChecks,
   LogOut,
   Menu,
   X,
@@ -49,6 +50,7 @@ const NAV: NavSection[] = [
     itens: [
       { href: "/", label: "Dashboard", icon: Home },
       { href: "/loteamentos", label: "Loteamentos", icon: Building2 },
+      { href: "/fases-obra", label: "Fases da obra", icon: ListChecks },
       { href: "/gantt", label: "Gantt de Obras", icon: GanttChartSquare },
     ],
   },

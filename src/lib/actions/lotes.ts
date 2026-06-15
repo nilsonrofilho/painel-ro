@@ -48,6 +48,104 @@ function clean<T extends Record<string, unknown>>(data: T): T {
   ) as T;
 }
 
+type SupaClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Copia as fases de obra (incl. cronograma) e a composição de custo de um lote
+ * para outro. Re-mapeia predecessora_id (auto-FK) e fase_id da composição para
+ * apontarem para as novas fases — nunca para o lote de origem. gasto nasce 0
+ * (mantido por trigger); o orçamento da fase é recalculado pelo trigger da
+ * composição quando há itens.
+ */
+async function copiarFasesEComposicao(
+  supabase: SupaClient,
+  origemLoteId: string,
+  destinoLoteId: string,
+) {
+  const { data: fasesOrig } = await supabase
+    .from("fases_obra")
+    .select(
+      "id, nome, orcamento, data_inicio, data_fim, status, ordem, duracao_dias, predecessora_id",
+    )
+    .eq("lote_id", origemLoteId)
+    .order("ordem");
+  if (!fasesOrig || fasesOrig.length === 0) return;
+
+  // 1) Insere as novas fases (sem predecessora ainda) e monta o mapa old→new.
+  const { data: novasFases, error: e1 } = await supabase
+    .from("fases_obra")
+    .insert(
+      fasesOrig.map((f) => ({
+        lote_id: destinoLoteId,
+        nome: f.nome,
+        orcamento: f.orcamento,
+        data_inicio: f.data_inicio,
+        data_fim: f.data_fim,
+        status: f.status,
+        ordem: f.ordem,
+        duracao_dias: f.duracao_dias,
+        gasto: 0,
+      })),
+    )
+    .select("id, ordem");
+  if (e1) throw new Error(e1.message);
+
+  // mapa por `ordem` (estável: cada fase tem ordem única dentro do lote)
+  const novaPorOrdem = new Map<number, string>(
+    (novasFases ?? []).map((f) => [f.ordem, f.id]),
+  );
+  const novoIdDe = (oldFaseId: string): string | undefined => {
+    const orig = fasesOrig.find((f) => f.id === oldFaseId);
+    return orig ? novaPorOrdem.get(orig.ordem) : undefined;
+  };
+
+  // 2) Re-mapeia predecessora_id nas novas fases.
+  for (const f of fasesOrig) {
+    if (!f.predecessora_id) continue;
+    const novoId = novaPorOrdem.get(f.ordem);
+    const novoPred = novoIdDe(f.predecessora_id);
+    if (novoId && novoPred) {
+      await supabase
+        .from("fases_obra")
+        .update({ predecessora_id: novoPred })
+        .eq("id", novoId);
+    }
+  }
+
+  // 3) Copia a composição de custo de cada fase para a nova fase.
+  const oldFaseIds = fasesOrig.map((f) => f.id);
+  const { data: itens } = await supabase
+    .from("composicao_custo")
+    .select(
+      "fase_id, material_id, descricao, unidade, quantidade, valor_unitario, valor_total, ordem",
+    )
+    .in("fase_id", oldFaseIds);
+  if (itens && itens.length > 0) {
+    const linhas = itens
+      .map((it) => {
+        const novoFaseId = novoIdDe(it.fase_id);
+        if (!novoFaseId) return null;
+        return {
+          fase_id: novoFaseId,
+          material_id: it.material_id,
+          descricao: it.descricao,
+          unidade: it.unidade,
+          quantidade: it.quantidade,
+          valor_unitario: it.valor_unitario,
+          valor_total: it.valor_total,
+          ordem: it.ordem,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    if (linhas.length > 0) {
+      const { error: e3 } = await supabase
+        .from("composicao_custo")
+        .insert(linhas);
+      if (e3) throw new Error(e3.message);
+    }
+  }
+}
+
 export async function createLote(input: LoteInput) {
   const parsed = loteSchema.parse(input);
   const supabase = await createClient();
@@ -173,10 +271,17 @@ export async function duplicarLote(
       status: "disponivel" as const,
       data_entrega_real: null,
       valor_venda: null,
+      // não herda a pasta do Drive do original (evitaria sincronizar
+      // arquivos de outro lote para este).
+      drive_folder_id: null,
     })
     .select()
     .single();
   if (e2 || !novo) throw new Error(e2?.message ?? "Falha ao duplicar lote");
+
+  // Copia as fases de obra (com cronograma) e a composição de custo para o
+  // novo lote — preservando as dependências (predecessora_id) re-mapeadas.
+  await copiarFasesEComposicao(supabase, loteId, novo.id);
 
   const { data: quadra } = await supabase
     .from("quadras")
@@ -191,5 +296,6 @@ export async function duplicarLote(
   }
   revalidatePath("/");
   revalidatePath("/gantt");
+  revalidatePath("/fases-obra");
   redirect(`/lotes/${novo.id}`);
 }

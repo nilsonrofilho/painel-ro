@@ -9,6 +9,7 @@ import {
   Sparkles,
   ChevronRight,
   ListTree,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -52,7 +53,13 @@ import {
 } from "@/components/ui/dialog";
 import { KPICard } from "@/components/kpi-card";
 import { ResumoEtapasChart } from "@/components/charts/resumo-etapas-chart";
-import { addFase, updateFase, deleteFase, seedFasesPadrao } from "@/lib/actions/fases";
+import {
+  addFase,
+  updateFase,
+  deleteFase,
+  seedFasesPadrao,
+  recalcularCronograma,
+} from "@/lib/actions/fases";
 import { formatBRL, formatDateBR, formatPercent, cn } from "@/lib/utils";
 import type {
   FaseObra,
@@ -192,6 +199,21 @@ export function ObraCustosTab({
     }
   }
 
+  const [recalculando, setRecalculando] = React.useState(false);
+  async function handleRecalcular() {
+    setRecalculando(true);
+    try {
+      const { fasesAtualizadas } = await recalcularCronograma(lote.id);
+      toast.success(
+        `Cronograma recalculado — ${fasesAtualizadas} fase(s) com datas encadeadas.`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro");
+    } finally {
+      setRecalculando(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* KPIs */}
@@ -250,11 +272,27 @@ export function ObraCustosTab({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Fases da obra</CardTitle>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {fases.length === 0 && (
               <Button variant="outline" size="sm" onClick={handleSeed}>
                 <Sparkles className="h-4 w-4" />
                 Usar fases padrão
+              </Button>
+            )}
+            {fases.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRecalcular}
+                disabled={recalculando}
+                title="Encadeia as datas das fases pelas durações, a partir da data de início da obra do lote"
+              >
+                {recalculando ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CalendarClock className="h-4 w-4" />
+                )}
+                Recalcular cronograma
               </Button>
             )}
             <Button size="sm" onClick={openNew}>
