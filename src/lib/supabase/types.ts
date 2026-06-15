@@ -64,6 +64,7 @@ export interface LoteRow {
   valor_venda: number | null;
   orcamento_total: number | null;
   observacoes: string | null;
+  drive_folder_id: string | null;
   created_at: string;
 }
 
@@ -215,6 +216,8 @@ export interface DocumentoRow {
   nome: string;
   etapa: string | null;
   arquivo_url: string;
+  origem: "manual" | "drive";
+  drive_file_id: string | null;
   uploaded_at: string;
 }
 

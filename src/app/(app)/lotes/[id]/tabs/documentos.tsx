@@ -1,7 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Loader2, FileText, ExternalLink, Download } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  FileText,
+  ExternalLink,
+  Download,
+  FolderSync,
+  RefreshCw,
+  Check,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
@@ -21,8 +31,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
 import { FileUpload } from "@/components/file-upload";
 import { addDocumento, deleteDocumento } from "@/lib/actions/documentos";
+import {
+  vincularPastaDrive,
+  sincronizarLoteAgora,
+} from "@/lib/actions/drive";
 import { formatDateTimeBR } from "@/lib/utils";
 import type { Documento, Lote } from "@/lib/supabase/types";
 
@@ -50,6 +65,44 @@ export function DocumentosTab({ lote, documentos }: Props) {
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
   const [nome, setNome] = React.useState("");
   const [etapa, setEtapa] = React.useState("");
+
+  // Google Drive
+  const [pastaInput, setPastaInput] = React.useState(lote.drive_folder_id ?? "");
+  const [salvandoPasta, setSalvandoPasta] = React.useState(false);
+  const [sincronizando, setSincronizando] = React.useState(false);
+  const vinculado = Boolean(lote.drive_folder_id);
+
+  async function handleSalvarPasta() {
+    setSalvandoPasta(true);
+    try {
+      await vincularPastaDrive(lote.id, pastaInput);
+      toast.success(
+        pastaInput.trim()
+          ? "Pasta vinculada. A sincronização começa na próxima verificação."
+          : "Pasta desvinculada.",
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro");
+    } finally {
+      setSalvandoPasta(false);
+    }
+  }
+
+  async function handleSincronizarAgora() {
+    setSincronizando(true);
+    try {
+      const { importados } = await sincronizarLoteAgora(lote.id);
+      toast.success(
+        importados > 0
+          ? `${importados} arquivo(s) importado(s) do Drive.`
+          : "Tudo já sincronizado — nenhum arquivo novo.",
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro");
+    } finally {
+      setSincronizando(false);
+    }
+  }
 
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -90,6 +143,65 @@ export function DocumentosTab({ lote, documentos }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Sincronização com Google Drive */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FolderSync className="h-4 w-4 text-primary" />
+            Pasta do Google Drive
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Cole o link da pasta deste lote no Drive. Tudo que você jogar nela é
+            importado automaticamente para os documentos abaixo.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={pastaInput}
+              onChange={(e) => setPastaInput(e.target.value)}
+              placeholder="https://drive.google.com/drive/folders/…"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSalvarPasta}
+              disabled={salvandoPasta}
+            >
+              {salvandoPasta ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              Salvar pasta
+            </Button>
+          </div>
+          {vinculado && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-success/30 bg-success/5 p-2.5">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-success">
+                <Check className="h-3.5 w-3.5" />
+                Pasta vinculada — sincroniza sozinho a cada poucos minutos.
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleSincronizarAgora}
+                disabled={sincronizando}
+              >
+                {sincronizando ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Sincronizar agora
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">
@@ -134,11 +246,19 @@ export function DocumentosTab({ lote, documentos }: Props) {
                     <h4 className="line-clamp-2 text-sm font-semibold">
                       {d.nome}
                     </h4>
-                    {d.etapa && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {d.etapa}
-                      </p>
-                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {d.origem === "drive" && (
+                        <Badge variant="success" className="gap-1">
+                          <FolderSync className="h-2.5 w-2.5" />
+                          Drive
+                        </Badge>
+                      )}
+                      {d.etapa && (
+                        <span className="text-xs text-muted-foreground">
+                          {d.etapa}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-2 text-[10px] text-muted-foreground">
                       Enviado em {formatDateTimeBR(d.uploaded_at)}
                     </p>
