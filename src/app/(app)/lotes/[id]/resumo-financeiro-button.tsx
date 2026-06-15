@@ -38,7 +38,7 @@ export function ResumoFinanceiroButton({ numero, etapas }: Props) {
           </DialogHeader>
           <ResumoEtapasChart
             etapas={etapas}
-            emptyMessage="Cadastre fases na aba Obra & Custos para ver o resumo."
+            emptyMessage="Cadastre fases na aba Fases da obra para ver o resumo."
           />
         </DialogContent>
       </Dialog>

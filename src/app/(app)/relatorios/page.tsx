@@ -67,7 +67,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
         <CardContent>
           <ResumoEtapasChart
             etapas={etapas}
-            emptyMessage="Nenhuma fase de obra cadastrada nos lotes deste filtro. Cadastre fases na aba Obra & Custos dos lotes."
+            emptyMessage="Nenhuma fase de obra cadastrada nos lotes deste filtro. Cadastre fases na aba Fases da obra dos lotes."
           />
         </CardContent>
       </Card>

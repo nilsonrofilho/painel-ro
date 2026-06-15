@@ -218,7 +218,7 @@ export default async function LoteDetalhePage({ params }: Props) {
             Venda
           </TabsTrigger>
           <TabsTrigger value="obra-custos" icon={<Wallet className="h-4 w-4" />}>
-            Obra & Custos
+            Fases da obra
           </TabsTrigger>
           <TabsTrigger value="materiais" icon={<Package className="h-4 w-4" />}>
             Materiais
