@@ -86,6 +86,7 @@ export interface VendaRow {
   cliente_cpf: string | null;
   cliente_telefone: string | null;
   cliente_email: string | null;
+  cliente_nascimento: string | null;
   corretor_id: string | null;
   comissao_pct: number | null;
   comissao_valor: number | null;
@@ -165,6 +166,7 @@ export interface FuncionarioRow {
   telefone: string | null;
   endereco: string | null;
   data_admissao: string | null;
+  data_nascimento: string | null;
   foto_url: string | null;
   status: "ativo" | "inativo";
   created_at: string;
@@ -336,6 +338,7 @@ export interface InvestidorRow {
   cpf_cnpj: string | null;
   telefone: string | null;
   email: string | null;
+  data_nascimento: string | null;
   observacao: string | null;
   token_publico: string;
   ativo: boolean;

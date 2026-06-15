@@ -33,6 +33,8 @@ import {
   getMateriaisCatalogo,
   getGastosTotaisLote,
   getDiariosDoLote,
+  getAportesDoLote,
+  getInvestidores,
 } from "@/lib/queries";
 import { formatBRL, formatDateBR } from "@/lib/utils";
 import { ETAPAS_OBRA } from "@/lib/constants";
@@ -72,6 +74,8 @@ export default async function LoteDetalhePage({ params }: Props) {
     catalogoMateriais,
     gastoTotal,
     diarios,
+    aportesLote,
+    investidores,
   ] = await Promise.all([
     getVendasDoLote(id),
     getFasesDoLote(id),
@@ -84,6 +88,8 @@ export default async function LoteDetalhePage({ params }: Props) {
     getMateriaisCatalogo(),
     getGastosTotaisLote(id),
     getDiariosDoLote(id),
+    getAportesDoLote(id),
+    getInvestidores(),
   ]);
 
   const etapaCfg = ETAPAS_OBRA[lote.etapa ?? "planejamento"];
@@ -236,6 +242,8 @@ export default async function LoteDetalhePage({ params }: Props) {
             etapaPercent={etapaCfg.percent}
             gastoTotal={gastoTotal}
             vendaAtiva={vendas.find((v) => v.status === "ativa") ?? null}
+            aportes={aportesLote}
+            investidores={investidores}
           />
         </TabsContent>
         <TabsContent value="venda">

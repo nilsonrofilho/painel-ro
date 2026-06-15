@@ -544,6 +544,39 @@ export async function getInvestidor(id: string): Promise<Investidor | null> {
   return data as Investidor | null;
 }
 
+export interface AporteDoLote {
+  id: string;
+  investidor_id: string;
+  investidor_nome: string;
+  valor_investido: number;
+  retorno_pct: number | null;
+  retorno_valor: number | null;
+}
+
+/** Aportes (investidores) vinculados a um lote específico. */
+export async function getAportesDoLote(
+  loteId: string,
+): Promise<AporteDoLote[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("aportes")
+    .select(
+      "id, investidor_id, valor_investido, retorno_pct, retorno_valor, investidor:investidores(nome)",
+    )
+    .eq("lote_id", loteId);
+  return (data ?? []).map((a) => {
+    const inv = a.investidor as unknown as { nome: string } | null;
+    return {
+      id: a.id,
+      investidor_id: a.investidor_id,
+      investidor_nome: inv?.nome ?? "—",
+      valor_investido: Number(a.valor_investido ?? 0),
+      retorno_pct: a.retorno_pct,
+      retorno_valor: a.retorno_valor,
+    };
+  });
+}
+
 export async function getInvestidorPorToken(
   token: string,
 ): Promise<Investidor | null> {

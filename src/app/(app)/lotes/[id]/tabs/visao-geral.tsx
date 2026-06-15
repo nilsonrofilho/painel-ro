@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatDateBR, formatPercent } from "@/lib/utils";
-import type { Lote, Loteamento, Quadra, Venda } from "@/lib/supabase/types";
+import type { Lote, Loteamento, Quadra, Venda, Investidor } from "@/lib/supabase/types";
+import type { AporteDoLote } from "@/lib/queries";
+import { InvestidoresCard } from "../investidores-card";
 
 interface Props {
   lote: Lote;
@@ -14,6 +16,8 @@ interface Props {
   etapaPercent: number;
   gastoTotal: number;
   vendaAtiva: Venda | null;
+  aportes: AporteDoLote[];
+  investidores: Investidor[];
 }
 
 export function VisaoGeralTab({
@@ -23,6 +27,8 @@ export function VisaoGeralTab({
   etapaPercent,
   gastoTotal,
   vendaAtiva,
+  aportes,
+  investidores,
 }: Props) {
   const orcamento = Number(lote.orcamento_total ?? 0);
   const pctUsado = orcamento > 0 ? (gastoTotal / orcamento) * 100 : 0;
@@ -34,6 +40,7 @@ export function VisaoGeralTab({
         : "bg-success";
 
   return (
+    <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-2">
       {/* Localização */}
       <Card>
@@ -216,6 +223,13 @@ export function VisaoGeralTab({
           </Button>
         </CardContent>
       </Card>
+    </div>
+
+      <InvestidoresCard
+        loteId={lote.id}
+        aportes={aportes}
+        investidores={investidores}
+      />
     </div>
   );
 }

@@ -36,6 +36,7 @@ const schema = z.object({
   telefone: z.string().optional(),
   endereco: z.string().optional(),
   data_admissao: z.string().optional(),
+  data_nascimento: z.string().optional(),
   status: z.enum(["ativo", "inativo"]),
 });
 
@@ -63,6 +64,7 @@ export function FuncionarioForm({ funcionario }: { funcionario?: Funcionario }) 
       telefone: funcionario?.telefone ?? "",
       endereco: funcionario?.endereco ?? "",
       data_admissao: funcionario?.data_admissao ?? "",
+      data_nascimento: funcionario?.data_nascimento ?? "",
       status: funcionario?.status ?? "ativo",
     },
   });
@@ -81,6 +83,7 @@ export function FuncionarioForm({ funcionario }: { funcionario?: Funcionario }) 
         telefone: v.telefone || null,
         endereco: v.endereco || null,
         data_admissao: v.data_admissao || null,
+        data_nascimento: v.data_nascimento || null,
         foto_url: fotoUrl,
         status: v.status,
       };
@@ -169,6 +172,14 @@ export function FuncionarioForm({ funcionario }: { funcionario?: Funcionario }) 
                 id="data_admissao"
                 type="date"
                 {...register("data_admissao")}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="data_nascimento">Data de nascimento</Label>
+              <Input
+                id="data_nascimento"
+                type="date"
+                {...register("data_nascimento")}
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">

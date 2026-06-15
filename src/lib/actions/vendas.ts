@@ -11,6 +11,7 @@ const vendaSchema = z.object({
   cliente_cpf: z.string().optional().nullable(),
   cliente_telefone: z.string().optional().nullable(),
   cliente_email: z.string().optional().nullable(),
+  cliente_nascimento: z.string().optional().nullable(),
   corretor_id: z.string().uuid().optional().nullable(),
   comissao_pct: z.coerce.number().optional().nullable(),
   comissao_valor: z.coerce.number().optional().nullable(),

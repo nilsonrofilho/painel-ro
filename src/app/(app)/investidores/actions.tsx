@@ -31,6 +31,7 @@ const schema = z.object({
   cpf_cnpj: z.string().optional(),
   telefone: z.string().optional(),
   email: z.string().optional(),
+  data_nascimento: z.string().optional(),
   observacao: z.string().optional(),
   ativo: z.enum(["ativo", "inativo"]),
 });
@@ -60,6 +61,7 @@ export function InvestidorActions({
       cpf_cnpj: investidor?.cpf_cnpj ?? "",
       telefone: investidor?.telefone ?? "",
       email: investidor?.email ?? "",
+      data_nascimento: investidor?.data_nascimento ?? "",
       observacao: investidor?.observacao ?? "",
       ativo: investidor?.ativo === false ? "inativo" : "ativo",
     },
@@ -86,6 +88,7 @@ export function InvestidorActions({
         cpf_cnpj: v.cpf_cnpj || null,
         telefone: v.telefone || null,
         email: v.email || null,
+        data_nascimento: v.data_nascimento || null,
         observacao: v.observacao || null,
         ativo: v.ativo === "ativo",
       };
@@ -170,9 +173,19 @@ export function InvestidorActions({
                 <Input id="telefone" {...register("telefone")} />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" {...register("email")} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">E-mail</Label>
+                <Input id="email" type="email" {...register("email")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="data_nascimento">Data de nascimento</Label>
+                <Input
+                  id="data_nascimento"
+                  type="date"
+                  {...register("data_nascimento")}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ativo">Status</Label>

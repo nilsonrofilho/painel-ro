@@ -48,6 +48,7 @@ const schema = z.object({
   cliente_cpf: z.string().optional(),
   cliente_telefone: z.string().optional(),
   cliente_email: z.string().optional(),
+  cliente_nascimento: z.string().optional(),
   corretor_id: z.string().optional(),
   comissao_pct: z.string().optional(),
   valor: z.string().optional(),
@@ -92,6 +93,7 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
       cliente_cpf: "",
       cliente_telefone: "",
       cliente_email: "",
+      cliente_nascimento: "",
       corretor_id: "",
       comissao_pct: "",
       valor: tipo === "venda" ? lote.valor_venda?.toString() ?? "" : "",
@@ -110,6 +112,7 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
       cliente_cpf: v.cliente_cpf ?? "",
       cliente_telefone: v.cliente_telefone ?? "",
       cliente_email: v.cliente_email ?? "",
+      cliente_nascimento: v.cliente_nascimento ?? "",
       corretor_id: v.corretor_id ?? "",
       comissao_pct: v.comissao_pct?.toString() ?? "",
       valor: v.valor?.toString() ?? "",
@@ -148,6 +151,7 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
         cliente_cpf: values.cliente_cpf || null,
         cliente_telefone: values.cliente_telefone || null,
         cliente_email: values.cliente_email || null,
+        cliente_nascimento: values.cliente_nascimento || null,
         corretor_id: values.corretor_id || null,
         comissao_pct: pct,
         comissao_valor: comissaoValor,
@@ -404,12 +408,20 @@ export function VendaTab({ lote, vendas, corretores }: Props) {
                   {...register("cliente_telefone")}
                 />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="cliente_email">E-mail</Label>
                 <Input id="cliente_email" {...register("cliente_email")} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="data">Data</Label>
+                <Label htmlFor="cliente_nascimento">Data de nascimento</Label>
+                <Input
+                  id="cliente_nascimento"
+                  type="date"
+                  {...register("cliente_nascimento")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="data">Data da {open === "venda" ? "venda" : "reserva"}</Label>
                 <Input id="data" type="date" {...register("data")} />
               </div>
               <div className="space-y-1.5">

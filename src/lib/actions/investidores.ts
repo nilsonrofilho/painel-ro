@@ -16,6 +16,7 @@ const investidorSchema = z.object({
   cpf_cnpj: z.string().optional().nullable(),
   telefone: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
+  data_nascimento: z.string().optional().nullable(),
   observacao: z.string().optional().nullable(),
   ativo: z.boolean().default(true),
 });
@@ -91,6 +92,8 @@ export async function addAporte(input: z.infer<typeof aporteSchema>) {
     throw new Error(error.message);
   }
   revalidatePath(`/investidores/${parsed.investidor_id}`);
+  revalidatePath("/lotes", "layout");
+  revalidatePath("/dashboard-investidor");
 }
 
 export async function updateAporte(
@@ -105,6 +108,8 @@ export async function updateAporte(
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/investidores/${investidorId}`);
+  revalidatePath("/lotes", "layout");
+  revalidatePath("/dashboard-investidor");
 }
 
 export async function deleteAporte(id: string, investidorId: string) {
@@ -112,4 +117,6 @@ export async function deleteAporte(id: string, investidorId: string) {
   const { error } = await supabase.from("aportes").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/investidores/${investidorId}`);
+  revalidatePath("/lotes", "layout");
+  revalidatePath("/dashboard-investidor");
 }

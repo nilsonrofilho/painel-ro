@@ -19,6 +19,7 @@ const funcionarioSchema = z.object({
   telefone: z.string().optional().nullable(),
   endereco: z.string().optional().nullable(),
   data_admissao: z.string().optional().nullable(),
+  data_nascimento: z.string().optional().nullable(),
   foto_url: z.string().optional().nullable(),
   status: z.enum(["ativo", "inativo"]).default("ativo"),
 });
